@@ -1,0 +1,14 @@
+{
+  "ui": "",
+  "change": "",
+  "pluginSetup": {
+    "prepareInstallation": {"inputs": [{
+      "name": "",
+    "type": "",
+    "internalType": "",
+    "description": ""
+    }]},
+    "prepareUpdate": "",
+    "prepareUninstallation": ""
+  }
+}
