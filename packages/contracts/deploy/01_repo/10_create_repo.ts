@@ -8,32 +8,40 @@ import {
   PluginRepoFactory__factory,
   PluginRepoRegistry__factory,
   PluginRepo__factory,
-} from '@aragon/osx-ethers';
-import {log} from 'console';
+} from '@xinfin/osx-ethers';
 import {DeployFunction} from 'hardhat-deploy/types';
 import {HardhatRuntimeEnvironment} from 'hardhat/types';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log(`\nDeploying the "${PLUGIN_REPO_ENS_NAME}" plugin repo`);
 
-  const {network} = hre;
-  const [deployer] = await hre.ethers.getSigners();
+  const {network, ethers, deployments, getNamedAccounts} = hre;
+  const {deploy} = deployments;
+  const {deployer} = await getNamedAccounts();
+  const signer = await ethers.getSigner(deployer);
 
   // Get the PluginRepoFactory address
   const pluginRepoFactoryAddr: string = getPluginRepoFactoryAddress(
     network.name
   );
+  // console.log(signer);
 
-  const pluginRepoFactory = PluginRepoFactory__factory.connect(
-    pluginRepoFactoryAddr,
-    deployer
+  // const pluginRepoFactory = PluginRepoFactory__factory.connect(
+  //   pluginRepoFactoryAddr,
+  //   signer
+  // );
+  const pluginRepoFactory = await ethers.getContractAt(
+    'PluginRepoFactory',
+    pluginRepoFactoryAddr
   );
 
   // Create the PluginRepo
   const tx = await pluginRepoFactory.createPluginRepo(
     PLUGIN_REPO_ENS_NAME,
-    deployer.address
+    deployer
   );
+  console.log(1);
+
   const eventLog = await findEventTopicLog(
     tx,
     PluginRepoRegistry__factory.createInterface(),
@@ -45,7 +53,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const pluginRepo = PluginRepo__factory.connect(
     eventLog.args.pluginRepo,
-    deployer
+    signer
   );
 
   const blockNumberOfDeployment = (await tx.wait()).blockNumber;

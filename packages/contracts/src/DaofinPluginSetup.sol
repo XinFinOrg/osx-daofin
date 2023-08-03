@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
-import {PluginSetup, IPluginSetup} from "@aragon/osx/framework/plugin/setup/PluginSetup.sol";
-import {PermissionLib} from "@aragon/osx/core/permission/PermissionLib.sol";
+import {PluginUUPSUpgradeable} from "@xinfin/osx/core/plugin/PluginUUPSUpgradeable.sol";
+import {IDAO} from "@xinfin/osx/core/dao/IDAO.sol";
+import {PluginSetup, IPluginSetup} from "@xinfin/osx/framework/plugin/setup/PluginSetup.sol";
+import {PermissionLib} from "@xinfin/osx/core/permission/PermissionLib.sol";
 import {DaofinPlugin} from "./DaofinPlugin.sol";
 
 contract DaofinPluginSetup is PluginSetup {

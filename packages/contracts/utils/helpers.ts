@@ -1,4 +1,4 @@
-import {activeContractsList} from '@aragon/osx-ethers';
+import {activeContractsList} from '@xinfin/osx-ethers';
 import {ContractFactory, ContractTransaction} from 'ethers';
 import {
   Interface,

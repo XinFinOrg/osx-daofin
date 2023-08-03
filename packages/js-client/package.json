@@ -1,10 +1,10 @@
 {
-  "name": "@xinfin/daofin-sdk-client",
+  "name": "@xinfin/osx-daofin-sdk-client",
   "author": "Aragon Association",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "license": "MIT",
   "main": "dist/index.js",
-  "module": "dist/daofin-sdk-client.esm.js",
+  "module": "dist/osx-daofin-sdk-client.esm.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
@@ -19,6 +19,7 @@
     "start": "tsdx watch",
     "build": "tsdx build",
     "test": "TESTING=true tsdx test --verbose --runInBand",
+    "prepublishOnly": "yarn build",
     "lint": "prettier --check src test *.json",
     "lint:fix": "prettier --write src test *.json",
     "size": "size-limit",
@@ -49,10 +50,10 @@
     }
   ],
   "devDependencies": {
-    "@aragon/sdk-client": "1.10.0-rc1",
     "@ensdomains/ens-contracts": "^0.0.15",
     "@size-limit/preset-small-lib": "^7.0.8",
     "@types/jest": "^29.5.2",
+    "@xinfin/osx-sdk-client": "1.10.1-rc9",
     "ganache": "^7.8.0",
     "husky": "^7.0.4",
     "size-limit": "^7.0.8",
@@ -64,14 +65,15 @@
     "@aragon/osx-ethers": "1.3.0-rc0",
     "@aragon/sdk-client-common": "1.2.0-rc0",
     "@aragon/sdk-common": "1.5.0",
-    "@xinfin/daofin-ethers": "file:../contracts-ethers",
-    "@xinfin/osx-client-common": "file:../../../sdk/modules/client-common",
     "@ethersproject/abstract-signer": "^5.7.0",
     "@ethersproject/bignumber": "^5.7.0",
     "@ethersproject/constants": "^5.7.0",
     "@ethersproject/contracts": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
     "@ethersproject/wallet": "^5.7.0",
+    "@xinfin/osx-daofin-contracts": "^1.0.0",
+    "@xinfin/osx-daofin-contracts-ethers": "^1.2.2",
+    "@xinfin/osx-sdk-client": "^1.10.1-rc21",
     "graphql": "^16.6.0",
     "graphql-request": "4.3.0"
   },

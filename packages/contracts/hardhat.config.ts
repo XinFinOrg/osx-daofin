@@ -66,10 +66,10 @@ const networks: {[index: string]: NetworkUserConfig} = {
     chainId: 80001,
     url: `${apiUrls.polygonMumbai}`,
   },
-  // apothem: {
-  //   chainId: 51,
-  //   url: `${apiUrls.apothem}`,
-  // },
+  apothem: {
+    chainId: 51,
+    url: `${apiUrls.apothem}`,
+  },
   // xdc: {
   //   chainId: 51,
   //   url: `${apiUrls.xdc}`,

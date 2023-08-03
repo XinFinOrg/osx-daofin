@@ -3,12 +3,12 @@ pragma solidity 0.8.17;
 
 import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {PluginUUPSUpgradeable} from "@aragon/osx/core/plugin/PluginUUPSUpgradeable.sol";
+import {PluginUUPSUpgradeable} from "@xinfin/osx/core/plugin/PluginUUPSUpgradeable.sol";
 import {SafeCastUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
-import {ProposalUpgradeable} from "@aragon/osx/core/plugin/proposal/ProposalUpgradeable.sol";
-import {IProposal} from "@aragon/osx/core/plugin/proposal/IProposal.sol";
-import {Addresslist} from "@aragon/osx/plugins/utils/Addresslist.sol";
-import {IDAO} from "@aragon/osx/core/dao/IDAO.sol";
+import {ProposalUpgradeable} from "@xinfin/osx/core/plugin/proposal/ProposalUpgradeable.sol";
+import {IProposal} from "@xinfin/osx/core/plugin/proposal/IProposal.sol";
+import {Addresslist} from "@xinfin/osx/plugins/utils/Addresslist.sol";
+import {IDAO} from "@xinfin/osx/core/dao/IDAO.sol";
 import {IXDCValidator} from "./interfaces/IXdcValidator.sol";
 import {IGovernanceToken} from "./interfaces/IGovernanceToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
