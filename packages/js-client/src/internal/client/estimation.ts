@@ -1,5 +1,7 @@
-import { ClientCore } from "@xinfin/osx-client-common";
-import { IDaofinClientEstimation } from "../interfaces";
+import { DaofinPluginCore } from '../../core';
+import { IDaofinClientEstimation } from '../interfaces';
+import { ClientCore } from '@xinfin/osx-client-common';
 
-export class DaofinClientEstimation extends ClientCore
+export class DaofinClientEstimation
+  extends DaofinPluginCore
   implements IDaofinClientEstimation {}

@@ -2,13 +2,63 @@
   "ui": "",
   "change": "",
   "pluginSetup": {
-    "prepareInstallation": {"inputs": [{
-      "name": "",
-    "type": "",
-    "internalType": "",
-    "description": ""
-    }]},
-    "prepareUpdate": "",
-    "prepareUninstallation": ""
+    "prepareInstallation": {
+      "inputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "allowedAmounts_",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "address",
+          "name": "xdcValidatorContract_",
+          "type": "address"
+        },
+        {
+          "components": [
+            {
+              "internalType": "bytes32",
+              "name": "name",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "uint32",
+              "name": "supportThreshold",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint32",
+              "name": "minParticipation",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint64",
+              "name": "minDuration",
+              "type": "uint64"
+            },
+            {
+              "internalType": "uint256",
+              "name": "minVotingPower",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct DaofinPlugin.CommitteeVotingSettings[]",
+          "name": "detailedSettings_",
+          "type": "tuple[]"
+        },
+        {
+          "internalType": "uint64[]",
+          "name": "electionPeriod_",
+          "type": "uint64[]"
+        },
+        {
+          "internalType": "address[]",
+          "name": "judiciaries_",
+          "type": "address[]"
+        }
+      ],
+      "prepareUpdate": "",
+      "prepareUninstallation": ""
+    }
   }
 }

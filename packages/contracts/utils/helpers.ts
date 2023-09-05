@@ -89,7 +89,7 @@ export function getPluginInfo(networkName: string): any {
 function storePluginInfo(networkName: string, pluginInfo: any) {
   if (['localhost', 'hardhat', 'coverage'].includes(networkName)) {
     writeFileSync(
-      'plugin-info-testing.json',
+      'plugin-info.json',
       JSON.stringify(pluginInfo, null, 2) + '\n'
     );
   } else {
@@ -224,4 +224,7 @@ export async function deployWithProxy<T>(
     unsafeAllow: ['constructor'],
     constructorArgs: options.constructurArgs || [],
   }) as unknown as Promise<T>;
+}
+export async function timestampIn(durationInSec: number): Promise<number> {
+  return (await ethers.provider.getBlock('latest')).timestamp + durationInSec;
 }

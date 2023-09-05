@@ -2,5 +2,10 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
   "prettier.documentSelectors": ["**/*.sol"],
-  "solidity.formatter": "prettier"
+  "solidity.formatter": "prettier",
+  "workbench.colorCustomizations": {
+    "activityBar.background": "#492408",
+    "titleBar.activeBackground": "#66330B",
+    "titleBar.activeForeground": "#FEFAF6"
+  }
 }

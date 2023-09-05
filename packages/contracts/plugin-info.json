@@ -1,0 +1,32 @@
+{
+  "apothem": {
+    "repo": "beny-plugin-repo-51",
+    "address": "0x0D0C39427055C3274e933c183141446fd3B0e30C",
+    "args": [],
+    "blockNumberOfDeployment": 53761329,
+    "releases": {
+      "1": {
+        "builds": {
+          "1": {
+            "setup": {
+              "name": "DaofinPluginSetup",
+              "address": "0xc5aE0DdAE3Df441d8EF19A4FFd5b47884093cB09",
+              "args": [],
+              "blockNumberOfDeployment": 53761236
+            },
+            "implementation": {
+              "name": "DaofinPlugin",
+              "address": "0xB051C1EBbec94b0C91D8638b4084d9F59Dd2214D",
+              "args": [],
+              "blockNumberOfDeployment": 53761236
+            },
+            "helpers": [],
+            "buildMetadataURI": "ipfs://QmVvorWAfRAbtjBLQ7CvoZPyRRT6J5a4ziCoPpZw5ZZLUB",
+            "blockNumberOfPublication": 53761335
+          }
+        },
+        "releaseMetadataURI": "ipfs://QmbJWAESqCsf4RFCqEY7jecCashj8usXiyDNfKtZCwwzGb"
+      }
+    }
+  }
+}

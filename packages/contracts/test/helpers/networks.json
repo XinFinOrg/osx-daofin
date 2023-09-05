@@ -29,5 +29,11 @@
     "chainId": 80001,
     "feesUrl": "https://gasstation-mumbai.matic.today/v2",
     "deploy": ["./deploy/update/to_v1.3.0", "./deploy/verification"]
+  },
+  "apothem": {
+    "url": "https://apothem.xdcrpc.com",
+    "isTestnet": true,
+    "chainId": 51,
+    "deploy": ["./deploy/new", "./deploy/verification"]
   }
 }

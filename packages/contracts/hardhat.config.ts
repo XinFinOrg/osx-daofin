@@ -74,10 +74,10 @@ const networks: {[index: string]: NetworkUserConfig} = {
   //   chainId: 51,
   //   url: `${apiUrls.xdc}`,
   // },
-  // anvil: {
-  //   chainId: parseInt(process.env.ANVIL_CHAIN_ID as string) || 34337,
-  //   url: process.env.ANVIL_RPC_URL || '',
-  // },
+  anvil: {
+    chainId: parseInt(process.env.ANVIL_CHAIN_ID as string) || 34337,
+    url: process.env.ANVIL_RPC_URL || '',
+  },
 };
 
 // Uses hardhats private key if none is set. DON'T USE THIS ACCOUNT FOR DEPLOYMENTS

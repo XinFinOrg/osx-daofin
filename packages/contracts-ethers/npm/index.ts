@@ -1,5 +1,5 @@
 // TODO
-// import activeContracts from '../../../active_contracts.json';
+import daofinContracts from '../../contracts/plugin-info.json';
 
 export * from '../types/';
-// export const activeContractsList = activeContracts;
+export const daofinActiveContracts = daofinContracts;
