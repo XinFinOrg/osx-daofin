@@ -30,5 +30,7 @@ export const ADDRESS_ZERO = ethers.constants.AddressZero;
 export const ADDRESS_ONE = `0x${'0'.repeat(39)}1`;
 export const ADDRESS_TWO = `0x${'0'.repeat(39)}2`;
 export const NO_CONDITION = ADDRESS_ZERO;
+export const BYTES32_ZERO =
+  '0x0000000000000000000000000000000000000000000000000000000000000000';
 
-export const XdcValidator = '0x33d5e357b66d41F059777E9086245a878697458f';
+export const XdcValidator = '0x0000000000000000000000000000000000000088';

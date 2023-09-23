@@ -1,3 +1,11 @@
+import {
+  DAO_ENS_SUB_DOMAIN,
+  METADATA,
+  PLUGIN_REPO_ENS_NAME,
+  PLUGIN_SETUP_CONTRACT_NAME,
+  XdcValidator,
+} from '../../plugin-settings';
+import {getPluginInfo} from '../../utils/helpers';
 import {GasFeeEstimation} from '@xinfin/osx-client-common';
 import {SupportedNetwork} from '@xinfin/osx-client-common';
 import {
@@ -22,7 +30,7 @@ import {
 } from '@xinfin/osx-sdk-common';
 import {BigNumber, BigNumberish} from 'ethers';
 import {defaultAbiCoder, parseEther} from 'ethers/lib/utils';
-import {ethers, network} from 'hardhat';
+import {deployments, ethers, network} from 'hardhat';
 import {DeployFunction} from 'hardhat-deploy/types';
 import {HardhatRuntimeEnvironment} from 'hardhat/types';
 
@@ -32,87 +40,27 @@ export type DaofinPluginInstall = {
     amounts: BigNumberish[];
   };
   committeeSettings: any[];
-  electionPeriods: string[];
+  electionPeriods: BigNumberish[];
 };
-export const INSTALLATION_ABI: MetadataAbiInput[] = [
-  {
-    internalType: 'uint256[]',
-    name: 'allowedAmounts_',
-    type: 'uint256[]',
-    description: '',
-  },
-  {
-    internalType: 'address',
-    name: 'xdcValidatorContract_',
-    type: 'address',
-    description: '',
-  },
-  {
-    components: [
-      {
-        internalType: 'bytes32',
-        name: 'name',
-        type: 'bytes32',
-        description: '',
-      },
-      {
-        internalType: 'uint32',
-        name: 'supportThreshold',
-        type: 'uint32',
-        description: '',
-      },
-      {
-        internalType: 'uint32',
-        name: 'minParticipation',
-        type: 'uint32',
-        description: '',
-      },
-      {
-        internalType: 'uint64',
-        name: 'minDuration',
-        type: 'uint64',
-        description: '',
-      },
-      {
-        internalType: 'uint256',
-        name: 'minVotingPower',
-        type: 'uint256',
-        description: '',
-      },
-    ],
-    internalType: 'struct DaofinPlugin.CommitteeVotingSettings[]',
-    name: 'detailedSettings_',
-    type: 'tuple[]',
-    description: '',
-  },
-  {
-    internalType: 'uint64[]',
-    name: 'electionPeriod_',
-    type: 'uint64[]',
-    description: '',
-  },
-  {
-    internalType: 'address[]',
-    name: 'judiciaries_',
-    type: 'address[]',
-    description: '',
-  },
-];
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const [deployer] = await hre.ethers.getSigners();
+  const network = process.env.NETWORK_NAME
+    ? process.env.NETWORK_NAME
+    : hre.network.name;
 
-  const network = hre.network.name as SupportedNetwork;
   const contextParams: ContextParams = {
-    daoFactoryAddress: activeContractsList[network].daoFactory,
+    // @ts-ignore
+    daoFactoryAddress: activeContractsList[network].DAOFactory,
     network: {
-      name: hre.network.name,
+      name: network,
       chainId: hre.network.config.chainId ? hre.network.config.chainId : 0,
     },
     signer: deployer ?? undefined,
+    // @ts-ignore
     web3Providers: hre.network.config.url,
     ipfsNodes: [
       {
-        url: `https://ipfs.infura.io:5001/api/v0`,
+        url: process.env.IPFS_URL as string,
         headers: {
           Authorization: `Basic ${Buffer.from(
             process.env.IPFS_API_KEY + ':' + process.env.IPFS_API_SECRET
@@ -120,20 +68,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         },
       },
     ],
-    ensRegistryAddress: activeContractsList[hre.network.name].ensRegistry,
-    graphqlNodes: [
-      {url: 'http://localhost:8000/subgraphs/name/xinfin-osx-apothem'},
-    ],
+    // @ts-ignore
+    ensRegistryAddress: activeContractsList[network].ENSRegistry,
+    graphqlNodes: [{url: process.env.GRAPH_NODE_URL as string}],
   };
 
   const context = new Context(contextParams);
   const client = new Client(context);
-  const a = JSON.stringify({name: 'beny'});
-  console.log(a);
 
   const installedPluginParams: DaofinPluginInstall = {
     globalSettings: {
-      xdcValidator: '0x33d5e357b66d41F059777E9086245a878697458f',
+      xdcValidator: XdcValidator,
       amounts: [parseEther('1000').toString()],
     },
     committeeSettings: [
@@ -146,8 +91,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       ],
     ],
     electionPeriods: [
-      Date.now().toString(),
-      (Date.now() + 60 * 1000 * 60).toString(),
+      BigNumber.from(Date.now().toString()),
+      BigNumber.from((Date.now() + 60 * 1000 * 60).toString()),
     ],
   };
 
@@ -178,23 +123,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     avatar: 'https://s2.coinmarketcap.com/static/img/coins/64x64/2634.png',
     links: [],
   };
-  // console.log(await client.ipfs.add(JSON.stringify(metadata)));
-
-  // Through pinning the metadata in IPFS, we can get the IPFS URI. You can read more about it here: https://docs.ipfs.tech/how-to/pin-files/
-  // const metadataUri = await client.methods.pinMetadata(metadata);
+  const pluginInfo = getPluginInfo(network);
 
   const createDaoParams: CreateDaoParams = {
     metadataUri: '0x00',
-    ensSubdomain: 'benytesting003-1-50', // my-org.dao.eth
+    ensSubdomain: DAO_ENS_SUB_DOMAIN, // my-org.dao.eth
     plugins: [
       {
         data: hexToBytes(
           defaultAbiCoder.encode(
-            getNamedTypesFromMetadata(INSTALLATION_ABI),
+            getNamedTypesFromMetadata(
+              // @ts-ignore
+              METADATA.build.pluginSetup.prepareInstallation.inputs
+            ),
             params
           )
         ),
-        id: '0x4AB1FE1E980f58457fE3C7e8fC07d56b6C881062',
+        id: pluginInfo[network].address,
       },
     ], // plugin array cannot be empty or the transaction will fail. you need at least one governance mechanism to create your DAO.
   };

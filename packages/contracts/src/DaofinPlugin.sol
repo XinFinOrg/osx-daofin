@@ -22,30 +22,6 @@ contract DaofinPlugin is
     ProposalUpgradeable
 {
     using SafeCastUpgradeable for uint256;
-
-    bytes32 public constant MasterNodeCommittee = keccak256("MASTER_NODE_COMMITTEE");
-    bytes32 public constant PeoplesHouseCommittee = keccak256("PEOPLES_HOUSE_COMMITTEE");
-    bytes32 public constant JudiciaryCommittee = keccak256("JUDICIARY_COMMITTEE");
-
-    bytes32 public constant UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION =
-        keccak256("UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION");
-
-    bytes32 public constant UPDATE_COMMITTEE_VOTING_SETTINGS_PERMISSION =
-        keccak256("UPDATE_COMMITTEE_VOTING_SETTINGS_PERMISSION");
-
-    bytes32 public constant UPDATE_ELECTION_PERIOD_PERMISSION =
-        keccak256("UPDATE_ELECTION_PERIOD_PERMISSION");
-
-    bytes32 public constant UPDATE_COMMITTEES_LIST_PERMISSION =
-        keccak256("UPDATE_COMMITTEES_LIST_PERMISSION");
-
-    bytes32 public constant UPDATE_JUDICIARY_MAPPING_PERMISSION =
-        keccak256("UPDATE_JUDICIARY_MAPPING_PERMISSION");
-
-    event JudiciaryAdded(address _member);
-    event ElectionPeriodUpdated(uint64 _start, uint64 _end);
-    event Deposited(address _depositer, uint256 _amount);
-
     /// @notice The different voting modes available.
     /// @param Standard In standard mode, early execution is disabled.
     /// @param EarlyExecution In early execution mode, a proposal can be executed early before the end date if the vote outcome cannot mathematically change by more voters voting.
@@ -62,7 +38,8 @@ contract DaofinPlugin is
     struct DaofinGlobalSettings {
         IXDCValidator xdcValidator;
         uint256[] allowedAmounts;
-        // ElectionPeriod[] electionPeriods;
+        uint256 totalNumberOfMasterNodes;
+        // ElectionPeriod[] _electionPeriods;
     }
     struct CommitteeVotingSettings {
         bytes32 name;
@@ -98,13 +75,22 @@ contract DaofinPlugin is
     }
     struct Proposal {
         bool executed;
-        ProposalParameters parameters;
         address proposer;
-        mapping(address => VoteInfo) voterToInfo;
         address[] voters;
-        // mapping(bytes32 => TallyDatails) committeeToTally;
-        IDAO.Action[] actions;
         uint256 allowFailureMap;
+        ProposalParameters parameters;
+        IDAO.Action[] actions;
+        mapping(address => VoteInfo) voterToInfo;
+        /* 
+            keccake256("<COMMITTEE_NAME>") => CommitteeVotingSettings
+            NOTE: Specifies some settings for each defined committees separately
+        */
+        mapping(bytes32 => CommitteeVotingSettings) committeeToVotingSettings;
+        /* 
+            keccake256("<COMMITTEE_NAME>") => CommitteeVotingSettings
+            NOTE: Holds tally numbers for each committee.
+        */
+        mapping(bytes32 => TallyDatails) committeeToTallyDatails;
     }
     struct ProposalParameters {
         // GrantTiers _tier;
@@ -123,22 +109,48 @@ contract DaofinPlugin is
         uint256 amount;
         uint256 blockNumber;
     }
-    modifier checkLastProposalBlockNumber() {
-        require(getBlockSnapshot() > lastProposalBlockNumber, "Daofin: try later.");
-        _;
+    struct MasterNodeDelegateeMappings {
+        mapping(address => address) masterNodeToDelegatee;
+        mapping(address => address) delegateeToMasterNode;
+        uint256 lastModificationBlocknumber;
     }
-    // TODO: A rate limiter on creation of proposal like uint256 lastProposalTimestamp
+    bytes32 public constant MasterNodeCommittee = keccak256("MASTER_NODE_COMMITTEE");
+    bytes32 public constant PeoplesHouseCommittee = keccak256("PEOPLES_HOUSE_COMMITTEE");
+    bytes32 public constant JudiciaryCommittee = keccak256("JUDICIARY_COMMITTEE");
+
+    bytes32 public constant UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION =
+        keccak256("UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION");
+
+    bytes32 public constant UPDATE_COMMITTEE_VOTING_SETTINGS_PERMISSION =
+        keccak256("UPDATE_COMMITTEE_VOTING_SETTINGS_PERMISSION");
+
+    bytes32 public constant UPDATE_ELECTION_PERIOD_PERMISSION =
+        keccak256("UPDATE_ELECTION_PERIOD_PERMISSION");
+
+    bytes32 public constant UPDATE_COMMITTEES_LIST_PERMISSION =
+        keccak256("UPDATE_COMMITTEES_LIST_PERMISSION");
+
+    bytes32 public constant UPDATE_JUDICIARY_MAPPING_PERMISSION =
+        keccak256("UPDATE_JUDICIARY_MAPPING_PERMISSION");
+
+    event JudiciaryAdded(address _member);
+    event ElectionPeriodUpdated(uint64 _start, uint64 _end);
+    event Deposited(address _depositer, uint256 _amount);
+    event VoteReceived(uint256 _proposalId, address _voter, bytes32 _committee);
+
+    // A rate limiter on creation of proposal
     uint256 lastProposalBlockNumber;
+
     // Global settings
     DaofinGlobalSettings private _daofinGlobalSettings;
 
     // proposalId => Proposal Object
-    mapping(uint256 => Proposal) private _proposals;
+    mapping(uint256 => Proposal) public _proposals;
 
     /* 
         keccake256("<COMMITTEE_NAME>") => CommitteeVotingSettings
         NOTE: Specifies some settings for each defined committees separately
-     */
+    */
     mapping(bytes32 => CommitteeVotingSettings) private _committeesToVotingSettings;
 
     /* 
@@ -148,18 +160,26 @@ contract DaofinPlugin is
     mapping(bytes32 => mapping(uint256 => TallyDatails)) private _committeesToTallyDetails;
 
     /*
-        voter => governanceToken
+        voter => SnapshotAmount
         NOTE: holds deposited amount to the Dao treasury contract
     */
     mapping(address => SnapshotAmount) public _voterToLockedAmounts;
 
-    //
-    mapping(address => uint256[]) private _votersToPropsalIds;
+    /* 
+        A voter address => list of proposalIDs 
+        NOTE: holds a whitelist mapping
+    */
+    mapping(address => uint256[]) private _votersToProposalIds;
     /* 
         Judiciary address => bool
         NOTE: holds a whitelist mapping
     */
     mapping(address => bool) public _judiciaryCommittee;
+
+    /* 
+        NOTE: holds a master node delegatee whitelist mapping
+    */
+    MasterNodeDelegateeMappings public _masterNodeDelegatee;
 
     // Holds a list of keccake256("<COMMITTEE_NAME>")
     bytes32[] public _committeesList;
@@ -171,18 +191,16 @@ contract DaofinPlugin is
         address _voter = _msgSender();
         uint256 _value = msg.value;
 
-        // uint256 snapshotBlock = getBlockSnapshot();
-
         bool isAllowed = isAllowedAmount(_voter, _value);
         if (!isAllowed) {
             revert("Daofin: invalid amount");
         }
-        uint256 blockNumber = getBlockSnapshot();
+        uint256 snapshotBlockNumber = getBlockSnapshot();
 
-        require(blockNumber > _voterToLockedAmounts[_voter].blockNumber);
+        require(snapshotBlockNumber > _voterToLockedAmounts[_voter].blockNumber);
 
         _voterToLockedAmounts[_voter].amount += _value;
-        _voterToLockedAmounts[_voter].blockNumber = blockNumber;
+        _voterToLockedAmounts[_voter].blockNumber = snapshotBlockNumber;
 
         (bool success, ) = address(dao()).call{value: _value}("");
         require(success, "Daofin: failed");
@@ -201,18 +219,17 @@ contract DaofinPlugin is
         address[] calldata judiciaries_
     ) external initializer {
         __PluginUUPSUpgradeable_init(_dao);
-        // // TODO: _updateVotingSetting(_votingSettings);
 
         // Create a daofinGlobalSettings local variable
         DaofinGlobalSettings memory _settings = getGlobalSettings();
 
         // A few validation
-        // if (settings_.electionPeriods.length == 0) revert();
         if (xdcValidatorContract_ == address(0)) revert();
 
         // Assign XDC Master Node contract address
         _settings.xdcValidator = IXDCValidator(xdcValidatorContract_);
 
+        // TODO: fetch total MasterNode Numbers in GlobalSettings
         // Assign and check Election period
         for (uint256 i; i < electionPeriod_.length; i++) {
             uint64 _startDate = electionPeriod_[i];
@@ -265,7 +282,6 @@ contract DaofinPlugin is
 
     function createProposal(
         bytes calldata _metadata,
-        GrantTiers _tier,
         IDAO.Action[] calldata _actions,
         uint256 _electionPeriodIndex,
         uint256 _allowFailureMap
@@ -303,7 +319,16 @@ contract DaofinPlugin is
         proposal_.parameters.snapshotBlock = snapshotBlock.toUint64();
         // proposal_.ope
         // proposal_.parameters._tier = _tier;
-
+        bytes32[] memory committeesList = getCommitteesList();
+        for (uint i = 0; i < committeesList.length; ) {
+            bytes32 committee = committeesList[i];
+            if (committee == bytes32(0)) revert("Daofin: wrong Committee");
+            CommitteeVotingSettings memory cvs = getCommitteesToVotingSettings(committee);
+            proposal_.committeeToVotingSettings[committee] = cvs;
+            unchecked {
+                ++i;
+            }
+        }
         // Reduce costs
         if (_allowFailureMap != 0) {
             proposal_.allowFailureMap = _allowFailureMap;
@@ -318,76 +343,56 @@ contract DaofinPlugin is
         // Boom.. done.
     }
 
-    function vote(
-        uint256 _proposalId,
-        bytes32 _committee,
-        VoteInfo calldata _voteInfo,
-        bool _tryEarlyExecution
-    ) external {
+    function _updateVote(
+        uint256 proposalId_,
+        address voter_,
+        bytes32 committee_,
+        VoteOption voteOption_
+    ) private {
+        CommitteeVotingSettings memory cvs = getProposalVotingSettings(proposalId_, committee_);
+        TallyDatails memory td = getProposalTallyDetails(proposalId_, committee_);
+
+        if (voteOption_ == VoteOption.Yes) {
+            td.yes += cvs.minVotingPower;
+        } else if (voteOption_ == VoteOption.No) {
+            td.no += cvs.minVotingPower;
+        } else if (voteOption_ == VoteOption.Abstain) {
+            td.abstain += cvs.minVotingPower;
+        }
+        _proposals[proposalId_].committeeToTallyDatails[committee_] = td;
+        _proposals[proposalId_].voters.push(voter_);
+        _proposals[proposalId_].voterToInfo[voter_] = VoteInfo(true, voteOption_);
+    }
+
+    function vote(uint256 _proposalId, VoteOption _voteOption, bool _tryEarlyExecution) external {
         // cache msg.sender
         address voter = _msgSender();
 
         // retrieve proposal Object
-        (
-            bool open,
-            bool executed,
-            address proposer,
-            address[] memory voters,
-            ProposalParameters memory parameters,
-            IDAO.Action[] memory actions,
-            uint256 allowFailureMap
-        ) = getProposal(_proposalId);
+        (bool open, , , , , , ) = getProposal(_proposalId);
         // check if is not open, revert()
         if (!open) revert("Daofin: it is not open");
 
-        // load _votingSettings
-        DaofinGlobalSettings memory _settings = getGlobalSettings();
-
         // A voter must not vote on a proposal twice
-        if (isVotedOnProposal(voter, _proposalId)) revert();
+        if (isVotedOnProposal(voter, _proposalId)) revert("Daofin: already voted");
 
         // Check if the supplied amount is in the range of specified values - 0 is place holder
-        if (!isAllowedAmount(voter, 0)) revert();
+        if (!isAllowedAmount(voter, 0)) revert("Daofin: deposit first");
 
-        // Check the voter is belongs to the right committee
-        if (!_isValidCommiteeMember(_committee, voter)) revert();
-        _votersToPropsalIds[voter].push(_proposalId);
+        bytes32 commitee = findCommitteeName(voter);
+        if (commitee == bytes32(0)) revert("Daofin: invalid voter");
+        _updateVote(_proposalId, voter, commitee, _voteOption);
 
-        CommitteeVotingSettings memory cvs = _committeesToVotingSettings[_committee];
-        // _updateVote();
-        // TODO: minVotingPower must mul to YESs
-        // if (_voteInfo.option == VoteOption.Yes) {
-        //     _committeesToTallyDetails[_committee][_proposalId].yes =
-        //         _committeesToTallyDetails[_committee][_proposalId].yes +
-        //         cvs.minVotingPower;
-        // } else if (_voteInfo.option == VoteOption.No) {
-        //     _committeesToTallyDetails[_committee][_proposalId].no =
-        //         _committeesToTallyDetails[_committee][_proposalId].no +
-        //         cvs.minVotingPower;
-        // } else if (_voteInfo.option == VoteOption.Abstain) {
-        //     _committeesToTallyDetails[_committee][_proposalId].abstain =
-        //         _committeesToTallyDetails[_committee][_proposalId].abstain +
-        //         cvs.minVotingPower;
-        // }
+        _votersToProposalIds[voter].push(_proposalId);
+
+        emit VoteReceived(_proposalId, voter, commitee);
     }
 
-    // function _updateVote(uint256 proposalId, _voteInfo) private {
-    //     if (_voteInfo.option == VoteOption.Yes) {
-    //         _committeesToTallyDetails[_committee][_proposalId].yes =
-    //             _committeesToTallyDetails[_committee][_proposalId].yes +
-    //             cvs.minVotingPower;
-    //     } else if (_voteInfo.option == VoteOption.No) {
-    //         _committeesToTallyDetails[_committee][_proposalId].no =
-    //             _committeesToTallyDetails[_committee][_proposalId].no +
-    //             cvs.minVotingPower;
-    //     } else if (_voteInfo.option == VoteOption.Abstain) {
-    //         _committeesToTallyDetails[_committee][_proposalId].abstain =
-    //             _committeesToTallyDetails[_committee][_proposalId].abstain +
-    //             cvs.minVotingPower;
-    //     }
-    // }
-
     function execute(uint256 _proposalId) external {
+        _execute(_proposalId);
+    }
+
+    function _execute(uint256 _proposalId) private {
         Proposal storage _proposal = _proposals[_proposalId];
         if (!_canExecute(_proposalId)) revert();
         _proposal.executed = true;
@@ -396,21 +401,6 @@ contract DaofinPlugin is
 
     function isVotedOnProposal(address _voter, uint256 _proposalId) public view returns (bool) {
         return _proposals[_proposalId].voterToInfo[_voter].voted;
-    }
-
-    function _isValidCommiteeMember(
-        bytes32 _committee,
-        address _voter
-    ) private view returns (bool) {
-        if (!_isValidCommitteeName(_committee)) return false;
-        if (_committee == MasterNodeCommittee) {
-            if (!IXDCValidator(_daofinGlobalSettings.xdcValidator).isCandidate(_voter))
-                return false;
-        } else if (_committee == JudiciaryCommittee) {
-            if (!_judiciaryCommittee[_voter]) return false;
-        }
-        // voter is coming from People's House
-        return true;
     }
 
     function isAllowedAmount(address voter, uint256 balance) private view returns (bool isValid) {
@@ -472,41 +462,49 @@ contract DaofinPlugin is
         );
     }
 
-    function _canExecute(uint256 _proposalId) internal view returns (bool isValid) {
+    function _canExecute(uint256 _proposalId) private view returns (bool isValid) {
         isValid = false;
 
-        (
-            bool open,
-            bool executed,
-            address proposer,
-            address[] memory voters,
-            ProposalParameters memory parameters,
-            IDAO.Action[] memory actions,
-            uint256 allowFailureMap
-        ) = getProposal(_proposalId);
+        (bool open, bool executed, , , , , ) = getProposal(_proposalId);
 
         // Verify that the proposal has not been executed or expired.
-        if (!open) {
-            return isValid;
+        if (!open && executed) {
+            return false;
         }
         for (uint256 i = 0; i < _committeesList.length; i++) {
             bytes32 committee = _committeesList[i];
-            TallyDatails memory _tallyDetails = _committeesToTallyDetails[committee][_proposalId];
-            if (_tallyDetails.yes >= _committeesToVotingSettings[committee].minParticipation) {
+
+            TallyDatails memory _tallyDetails = getProposalTallyDetails(_proposalId, committee);
+            CommitteeVotingSettings memory _settings = getProposalVotingSettings(
+                _proposalId,
+                committee
+            );
+
+            if (_tallyDetails.yes >= _settings.minParticipation) {
                 isValid = true;
             } else {
                 isValid = false;
+                return isValid;
             }
         }
 
         return isValid;
     }
 
+    function canExecute(uint256 _proposalId) external view returns (bool isValid) {
+        return _canExecute(_proposalId);
+    }
+
     function getElectionPeriods() public view returns (ElectionPeriod[] memory) {
         return _electionPeriods;
     }
 
+    function getCommitteesList() public view returns (bytes32[] memory) {
+        return _committeesList;
+    }
+
     function isJudiciaryMember(address _member) public view returns (bool) {
+        if (!isAllowedAmount(_member, 0)) return false;
         return _judiciaryCommittee[_member];
     }
 
@@ -533,12 +531,93 @@ contract DaofinPlugin is
         uint256[] calldata _allowedAmount
     ) external auth(UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION) {
         _daofinGlobalSettings.allowedAmounts = _allowedAmount;
+        // TODO: Emit AllowedAmountUpdated
     }
 
     function updateXDCValidatorAddress(
         address _systemContract
     ) external auth(UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION) {
         _daofinGlobalSettings.xdcValidator = IXDCValidator(_systemContract);
+        // TODO: Emit XDCValidatorAddressUpdated
+    }
+
+    function updateMasterNodeDelegatee(address delegatee_) external {
+        address masterNode = _msgSender();
+
+        if (masterNode == address(0)) revert();
+        if (delegatee_ == address(0)) revert();
+
+        if (!getGlobalSettings().xdcValidator.isCandidate(masterNode)) revert();
+
+        if (_voterToLockedAmounts[delegatee_].amount != 0) revert();
+
+        // Store in mapping and reverse mappings
+        _updateMasterNodeDelegatee(masterNode, delegatee_);
+
+        // TODO: Emit XDCValidatorAddressUpdated
+    }
+
+    function _updateMasterNodeDelegatee(address masterNode_, address delegatee_) private {
+        _masterNodeDelegatee.masterNodeToDelegatee[masterNode_] = delegatee_;
+        _masterNodeDelegatee.delegateeToMasterNode[delegatee_] = masterNode_;
+    }
+
+    function isMasterNodeDelegatee(address delegatee_) public view returns (bool isValid) {
+        isValid = true;
+        if (delegatee_ == address(0)) return false;
+
+        address masterNode = _masterNodeDelegatee.delegateeToMasterNode[delegatee_];
+        if (masterNode == address(0)) return false;
+
+        if (!getGlobalSettings().xdcValidator.isCandidate(masterNode)) return false;
+        if (!isAllowedAmount(delegatee_, 0)) return false;
+        return isValid;
+    }
+
+    function isPeopleHouse(address voter_) public view returns (bool isValid) {
+        bool isBelongToOtherCommittee = !isMasterNodeDelegatee(voter_) ||
+            !isJudiciaryMember(voter_);
+
+        return !isBelongToOtherCommittee && isAllowedAmount(voter_, 0);
+    }
+
+    function findCommitteeName(address voter_) public view returns (bytes32) {
+        if (voter_ == address(0)) return bytes32(0);
+
+        if (isMasterNodeDelegatee(voter_)) {
+            return MasterNodeCommittee;
+        }
+        if (isJudiciaryMember(voter_)) {
+            return JudiciaryCommittee;
+        }
+        if (isPeopleHouse(voter_)) {
+            return PeoplesHouseCommittee;
+        }
+    }
+
+    function getProposalVotingSettings(
+        uint256 proposalId_,
+        bytes32 committee_
+    ) public view returns (CommitteeVotingSettings memory) {
+        return _proposals[proposalId_].committeeToVotingSettings[committee_];
+    }
+
+    function getProposalTallyDetails(
+        uint256 proposalId_,
+        bytes32 committee_
+    ) public view returns (TallyDatails memory) {
+        return _proposals[proposalId_].committeeToTallyDatails[committee_];
+    }
+
+    function getProposalVoterToInfo(
+        uint256 proposalId_,
+        address voter_
+    ) public view returns (VoteInfo memory) {
+        return _proposals[proposalId_].voterToInfo[voter_];
+    }
+
+    function isVoterDepositted(address voter_) public view returns (bool) {
+        return _voterToLockedAmounts[voter_].amount > 0;
     }
 
     receive() external payable {}

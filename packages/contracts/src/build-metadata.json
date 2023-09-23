@@ -59,6 +59,9 @@
       ],
       "prepareUpdate": "",
       "prepareUninstallation": ""
+    },
+    "prepareUnInstallation": {
+      "inputs": []
     }
   }
 }

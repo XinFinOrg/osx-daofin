@@ -29,7 +29,7 @@ const apiUrls: NetworkNameMapping = {
   goerli: 'https://goerli.infura.io/v3/',
   polygon: 'https://polygon-testnet.public.blastapi.io',
   polygonMumbai: 'https://rpc.ankr.com/polygon_mumbai',
-  apothem: 'https://apothem.xdcrpc.com',
+  apothem: 'https://erpc.apothem.network',
   xdc: 'https://erpc.xinfin.network',
 };
 

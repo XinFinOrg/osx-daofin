@@ -1,14 +1,16 @@
+import {PLUGIN_SETUP_CONTRACT_NAME} from '../../plugin-settings';
 import {
+  DaofinPlugin,
+  DaofinPluginSetup,
+  DaofinPluginSetup__factory,
   PluginRepo,
-  SimpleStorageSetup,
-  SimpleStorageSetup__factory,
 } from '../../typechain';
 import {getPluginInfo, osxContracts} from '../../utils/helpers';
 import {toHex} from '../../utils/ipfs';
 import {PluginRepoRegistry__factory} from '@aragon/osx-ethers';
-import {PluginRepoRegistry} from '@aragon/osx-ethers';
-import {PluginRepo__factory} from '@aragon/osx-ethers';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
+import {PluginRepoRegistry} from '@xinfin/osx-ethers';
+import {PluginRepo__factory} from '@xinfin/osx-ethers';
 import {expect} from 'chai';
 import {deployments, ethers} from 'hardhat';
 
@@ -17,15 +19,14 @@ let repoRegistry: PluginRepoRegistry;
 let pluginRepo: PluginRepo;
 
 async function deployAll() {
-  await deployments.fixture();
+  await deployments.fixture([PLUGIN_SETUP_CONTRACT_NAME, 'Deployment']);
 }
 
 describe('PluginRepo Deployment', function () {
+  const hardhatForkNetwork = process.env.NETWORK_NAME
+    ? process.env.NETWORK_NAME
+    : 'mainnet';
   before(async () => {
-    const hardhatForkNetwork = process.env.NETWORK_NAME
-      ? process.env.NETWORK_NAME
-      : 'mainnet';
-
     signers = await ethers.getSigners();
 
     // Deploymen should be empty
@@ -35,7 +36,13 @@ describe('PluginRepo Deployment', function () {
     await deployAll();
 
     // Print info
-    console.log(JSON.stringify(getPluginInfo('hardhat')['hardhat'], null, 2));
+    console.log(
+      JSON.stringify(
+        getPluginInfo(hardhatForkNetwork)[hardhatForkNetwork],
+        null,
+        2
+      )
+    );
 
     // plugin repo registry
     repoRegistry = PluginRepoRegistry__factory.connect(
@@ -44,7 +51,7 @@ describe('PluginRepo Deployment', function () {
     );
 
     pluginRepo = PluginRepo__factory.connect(
-      getPluginInfo('hardhat')['hardhat'].address,
+      getPluginInfo(hardhatForkNetwork)[hardhatForkNetwork].address,
       signers[0]
     );
   });
@@ -83,11 +90,11 @@ describe('PluginRepo Deployment', function () {
   });
 
   context('PluginSetup Publication', async () => {
-    let setup: SimpleStorageSetup;
+    let setup: DaofinPluginSetup;
 
     before(async () => {
-      setup = SimpleStorageSetup__factory.connect(
-        (await deployments.get('SimpleStorageSetup')).address,
+      setup = DaofinPluginSetup__factory.connect(
+        (await deployments.get('DaofinPluginSetup')).address,
         signers[0]
       );
     });
@@ -96,7 +103,6 @@ describe('PluginRepo Deployment', function () {
         release: 1,
         build: 1,
       });
-
       expect(results.pluginSetup).to.equal(setup.address);
       expect(results.buildMetadata).to.equal(
         toHex('ipfs://QmY919VZ9gkeF6L169qQo89ucsUB9ScTaJVbGn8vMGGHxr')

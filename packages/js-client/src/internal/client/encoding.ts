@@ -15,6 +15,7 @@ import { MetadataAbiInput } from '@xinfin/osx-client-common';
 import {
   DaofinPlugin,
   DaofinPlugin__factory,
+  METADATA,
 } from '@xinfin/osx-daofin-contracts-ethers';
 import { daofinActiveContracts } from '@xinfin/osx-daofin-contracts-ethers';
 import { hexToBytes } from '@xinfin/osx-sdk-common';
@@ -90,6 +91,12 @@ export const INSTALLATION_ABI: MetadataAbiInput[] = [
     type: 'tuple[]',
     description: '',
   },
+  {
+    internalType: 'address[]',
+    name: 'judiciaries_',
+    type: 'address[]',
+    description: '',
+  },
 ];
 export class DaofinClientEncoding
   extends DaofinPluginCore
@@ -105,7 +112,10 @@ export class DaofinClientEncoding
     }
 
     const hexBytes = defaultAbiCoder.encode(
-      getNamedTypesFromMetadata(INSTALLATION_ABI),
+      getNamedTypesFromMetadata(
+        // @ts-ignore
+        METADATA.build.pluginSetup.prepareInstallation.inputs
+      ),
       params
     );
 

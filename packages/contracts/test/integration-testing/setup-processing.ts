@@ -1,27 +1,27 @@
 import {METADATA} from '../../plugin-settings';
 import {
+  DaofinPlugin,
+  DaofinPluginSetup,
+  DaofinPluginSetup__factory,
+  DaofinPlugin__factory,
   PluginRepo,
-  SimpleStorage,
-  SimpleStorageSetup,
-  SimpleStorageSetup__factory,
-  SimpleStorage__factory,
 } from '../../typechain';
-import {PluginSetupRefStruct} from '../../typechain/@aragon/osx/framework/dao/DAOFactory';
+import {PluginSetupRefStruct} from '../../typechain/@xinfin/osx/framework/plugin/setup/PluginSetupProcessor';
 import {getPluginInfo, osxContracts} from '../../utils/helpers';
 import {initializeFork} from '../helpers/fixture';
 import {installPLugin, uninstallPLugin} from '../helpers/setup';
 import {deployTestDao} from '../helpers/test-dao';
 import {getNamedTypesFromMetadata} from '../helpers/types';
+import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
 import {
   DAO,
   PluginRepo__factory,
   PluginSetupProcessor,
   PluginSetupProcessor__factory,
-} from '@aragon/osx-ethers';
-import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
+} from '@xinfin/osx-ethers';
 import {expect} from 'chai';
 import {BigNumber} from 'ethers';
-import {ethers} from 'hardhat';
+import {ethers, network} from 'hardhat';
 
 describe('PluginSetup Processing', function () {
   let signers: SignerWithAddress[];
@@ -33,7 +33,9 @@ describe('PluginSetup Processing', function () {
   before(async () => {
     signers = await ethers.getSigners();
 
-    const hardhatForkNetwork = 'goerli';
+    const hardhatForkNetwork = process.env.NETWORK_NAME
+      ? process.env.NETWORK_NAME
+      : network.name;
 
     await initializeFork(
       hardhatForkNetwork,
@@ -79,13 +81,13 @@ describe('PluginSetup Processing', function () {
   });
 
   context('Build 1', async () => {
-    let setup: SimpleStorageSetup;
+    let setup: DaofinPluginSetup;
     let pluginSetupRef: PluginSetupRefStruct;
-    let plugin: SimpleStorage;
+    let plugin: DaofinPlugin;
 
     before(async () => {
       // Deploy setups.
-      setup = SimpleStorageSetup__factory.connect(
+      setup = DaofinPluginSetup__factory.connect(
         (await pluginRepo['getLatestVersion(uint8)'](1)).pluginSetup,
         signers[0]
       );
@@ -110,11 +112,11 @@ describe('PluginSetup Processing', function () {
           getNamedTypesFromMetadata(
             METADATA.build.pluginSetup.prepareInstallation.inputs
           ),
-          [123]
+          []
         )
       );
 
-      plugin = SimpleStorage__factory.connect(
+      plugin = DaofinPlugin__factory.connect(
         results.preparedEvent.args.plugin,
         signers[0]
       );
@@ -126,9 +128,6 @@ describe('PluginSetup Processing', function () {
         await setup.implementation()
       );
 
-      // Check state.
-      expect(await plugin.number()).to.eq(123);
-
       // Uninstall build 1.
       await uninstallPLugin(
         psp,
@@ -137,7 +136,7 @@ describe('PluginSetup Processing', function () {
         pluginSetupRef,
         ethers.utils.defaultAbiCoder.encode(
           getNamedTypesFromMetadata(
-            METADATA.build.pluginSetup.prepareUninstallation.inputs
+            METADATA.build.pluginSetup.prepareUnInstallation.inputs
           ),
           []
         ),
