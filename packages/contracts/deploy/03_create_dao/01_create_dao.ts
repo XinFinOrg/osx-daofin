@@ -79,7 +79,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const installedPluginParams: DaofinPluginInstall = {
     globalSettings: {
       xdcValidator: XdcValidator,
-      amounts: [parseEther('1000').toString()],
+      amounts: [parseEther('1').toString(), parseEther('2').toString()],
     },
     committeeSettings: [
       [
@@ -112,8 +112,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       ],
     ],
     [
-      BigNumber.from(Date.now().toString()),
-      BigNumber.from((Date.now() + 60 * 1000 * 60).toString()),
+      Math.floor(new Date().getTime() / 1000),
+      Math.floor(new Date().getTime() / 1000) + 60 * 1000 * 60,
     ],
     [deployer.address],
   ];

@@ -1,6 +1,6 @@
 {
   "name": "@xinfin/osx-daofin-contracts-ethers",
-  "version": "1.2.8",
+  "version": "1.2.9",
   "description": "The Aragon OSx contract definitions for ethers.js",
   "main": "dist/bundle-cjs.js",
   "module": "dist/bundle-esm.js",

@@ -133,7 +133,7 @@ contract DaofinPlugin is
     bytes32 public constant UPDATE_JUDICIARY_MAPPING_PERMISSION =
         keccak256("UPDATE_JUDICIARY_MAPPING_PERMISSION");
 
-    event JudiciaryAdded(address _member);
+    event JudiciaryChanged(address _member, uint256 _action); // action: 0 = Add, 1 = Remove
     event ElectionPeriodUpdated(uint64 _start, uint64 _end);
     event Deposited(address _depositer, uint256 _amount);
     event VoteReceived(uint256 _proposalId, address _voter, bytes32 _committee);
@@ -246,8 +246,10 @@ contract DaofinPlugin is
         }
         for (uint256 i = 0; i < judiciaries_.length; i++) {
             address judiciary = judiciaries_[i];
-            if (judiciary == address(0)) revert();
-            _judiciaryCommittee[judiciary] = true;
+
+            _addJudiciaryMember(judiciary);
+            // if (judiciary == address(0)) revert();
+            // _judiciaryCommittee[judiciary] = true;
         }
         _settings.allowedAmounts = allowedAmounts_;
         _daofinGlobalSettings = _settings;
@@ -504,16 +506,20 @@ contract DaofinPlugin is
     }
 
     function isJudiciaryMember(address _member) public view returns (bool) {
-        if (!isAllowedAmount(_member, 0)) return false;
         return _judiciaryCommittee[_member];
     }
 
     function addJudiciaryMember(
         address _member
     ) external auth(UPDATE_JUDICIARY_MAPPING_PERMISSION) {
+        _addJudiciaryMember(_member);
+    }
+
+    function _addJudiciaryMember(address _member) private {
         if (isJudiciaryMember(_member)) revert();
+        if (_member == address(0)) revert();
         _judiciaryCommittee[_member] = true;
-        emit JudiciaryAdded(_member);
+        emit JudiciaryChanged(_member, 0);
     }
 
     function updateElectionPeriod(
