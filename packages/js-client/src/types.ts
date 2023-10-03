@@ -55,3 +55,16 @@ export type DepositStepValue =
       depositer: string;
       amount: string;
     };
+export enum AddJudiciarySteps {
+  ADDING = 'ADDING',
+  DONE = 'DONE',
+}
+export type AddJudiciaryStepValue =
+  | {
+      key: AddJudiciarySteps.ADDING;
+      txHash: string;
+    }
+  | {
+      key: AddJudiciarySteps.DONE;
+      member: string;
+    };

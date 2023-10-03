@@ -1,6 +1,8 @@
 import { DaofinPluginContext } from '../../context';
 import { DaofinPluginCore } from '../../core';
 import {
+  AddJudiciaryStepValue,
+  AddJudiciarySteps,
   CreateProposalParams,
   DaofinDetails,
   DepositStepValue,
@@ -226,6 +228,31 @@ export class DaofinClientMethods
       txHash: tx.hash,
       depositer,
       amount,
+    };
+  }
+  public async *addjudiciary(
+    member: string
+  ): AsyncGenerator<AddJudiciaryStepValue> {
+    const tx = await this.getDaofinInstance().addJudiciaryMember(member);
+
+    yield {
+      key: AddJudiciarySteps.ADDING,
+      txHash: tx.hash,
+    };
+    const receipt = await tx.wait();
+
+    const daofinInterface = DaofinPlugin__factory.createInterface();
+    const log = findLog(receipt, daofinInterface, 'JudiciaryChanged');
+    if (!log) {
+      throw new FailedDepositError();
+    }
+    const parsedLog = daofinInterface.parseLog(log);
+    const _member = parsedLog.args['_member'];
+    const _action = parsedLog.args['_action'];
+
+    yield {
+      key: AddJudiciarySteps.DONE,
+      member: _member,
     };
   }
 }

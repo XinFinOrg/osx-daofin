@@ -1,5 +1,5 @@
 import {bigIntToBytes32} from './bytes';
-import {Address, BigInt} from '@graphprotocol/graph-ts';
+import {Address, BigInt, Bytes} from '@graphprotocol/graph-ts';
 
 export function getProposalId(
   plugin: Address,
@@ -10,20 +10,29 @@ export function getProposalId(
     .concat('_')
     .concat(bigIntToBytes32(pluginProposalId));
 }
-export function getDepositId(daoAddress: Address, blockNumber: BigInt): string {
-  return daoAddress
-    .toHexString()
-    .concat('_')
-    .concat(bigIntToBytes32(blockNumber));
-}
-export function getJudiciaryId(
+export function getDepositId(
+  depositor: Address,
   daoAddress: Address,
-  blockNumber: BigInt,
-  timestamp: BigInt
+  blockNumber: BigInt
 ): string {
   return daoAddress
     .toHexString()
     .concat('_')
-    .concat(bigIntToBytes32(blockNumber))
-    .concat(bigIntToBytes32(timestamp));
+    .concat(depositor.toHexString())
+    .concat('_')
+    .concat(bigIntToBytes32(blockNumber));
+}
+export function getJudiciaryId(
+  pluginId: string,
+  member: Address,
+  action: BigInt,
+  blockNumber: BigInt
+): string {
+  return pluginId
+    .concat('_')
+    .concat(member.toHexString())
+    .concat('_')
+    .concat(bigIntToBytes32(action))
+    .concat('_')
+    .concat(bigIntToBytes32(blockNumber));
 }

@@ -77,7 +77,7 @@ export function handleInstallationPrepared(event: InstallationPrepared): void {
 
     // Add preparation specific data
     // updatePreparationDataForInstallationPrepared(preparationEntity, event);
-    preparationEntity.preparationData = event.params.data;
+    // preparationEntity.preparationData = event.params.data;
 
     preparationEntity.save();
 
@@ -98,6 +98,7 @@ export function handleInstallationPrepared(event: InstallationPrepared): void {
     // Create template
     const context = new DataSourceContext();
     context.setString('daoAddress', daoId);
+    context.setString('pluginInstallationId', installationId.toHexString());
     PluginTemplate.createWithContext(plugin, context);
 
     pluginEntity.save();

@@ -115,7 +115,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       Math.floor(new Date().getTime() / 1000),
       Math.floor(new Date().getTime() / 1000) + 60 * 1000 * 60,
     ],
-    [deployer.address],
+    [deployer.address, '0x5bfC74606bdA5092cefdede1A89c14624F6bF198'],
   ];
   const metadata: DaoMetadata = {
     name: 'benytesting003-1-5',

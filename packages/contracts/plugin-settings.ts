@@ -1,8 +1,8 @@
 import buildMetadata from './src/build-metadata.json';
 import releaseMetadata from './src/release-metadata.json';
 
-export const PLUGIN_REPO_ENS_NAME = 'beny-plugin-repo-10005';
-export const DAO_ENS_SUB_DOMAIN = 'beny-dao-10013';
+export const PLUGIN_REPO_ENS_NAME = 'beny-plugin-repo-10012';
+export const DAO_ENS_SUB_DOMAIN = 'beny-dao-10020';
 export const PLUGIN_CONTRACT_NAME = 'DaofinPlugin';
 export const PLUGIN_SETUP_CONTRACT_NAME = 'DaofinPluginSetup';
 

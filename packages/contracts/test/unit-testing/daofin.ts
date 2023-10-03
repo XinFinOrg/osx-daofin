@@ -35,10 +35,12 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let createPropsalParams: Parameters<DaofinPlugin['createProposal']>;
   let Alice: SignerWithAddress;
   let Bob: SignerWithAddress;
+  let Mike: SignerWithAddress;
   before(async () => {
     signers = await ethers.getSigners();
     Alice = signers[0];
     Bob = signers[1];
+    Mike = signers[2];
     dao = await deployTestDao(Alice);
 
     DaofinPlugin = new DaofinPlugin__factory(Alice);
@@ -769,5 +771,49 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       ];
     });
     it('should return true', async () => {});
+  });
+  describe('Add Judiciary', async () => {
+    before(async () => {
+      initializeParams = [
+        dao.address,
+        [parseEther('10'), parseEther('20'), parseEther('30')],
+        XdcValidator,
+        [
+          {
+            name: MasterNodeCommittee,
+            minDuration: 1,
+            minParticipation: 1,
+            minVotingPower: 2,
+            supportThreshold: 1,
+          },
+          {
+            name: JudiciaryCommittee,
+            minDuration: 1,
+            minParticipation: 1,
+            minVotingPower: 2,
+            supportThreshold: 1,
+          },
+          {
+            name: PeoplesHouseCommittee,
+            minDuration: 1,
+            minParticipation: 1,
+            minVotingPower: 1,
+            supportThreshold: 1,
+          },
+        ],
+        [Math.floor(Date.now() / 1000)],
+        [Alice.address],
+      ];
+    });
+    beforeEach(async () => {
+      await daofinPlugin.initialize(...initializeParams);
+    });
+    it('should add in the mapping', async () => {
+      expect(daofinPlugin.addJudiciaryMember(Bob.address)).to.not.reverted;
+    });
+    it('should not add in the mapping', async () => {
+      expect(daofinPlugin.connect(Bob.address).addJudiciaryMember(Mike.address))
+        .to.reverted;
+    });
   });
 });

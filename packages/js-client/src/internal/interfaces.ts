@@ -1,4 +1,5 @@
 import {
+  AddJudiciaryStepValue,
   CreateProposalParams,
   DepositStepValue,
   GlobalSettings,
@@ -33,6 +34,7 @@ export interface IDaofinClientMethods {
     voterAddress: string
   ) => Promise<boolean>;
   deposit: (amount: BigNumberish) => AsyncGenerator<DepositStepValue>;
+  addjudiciary: (member: string) => AsyncGenerator<AddJudiciaryStepValue>;
 }
 export interface IDaofinClientEncoding {}
 export interface IDaofinClientDecoding {

@@ -52,6 +52,7 @@ type Plugin implements PluginInstallation @entity {
   xdcValidator: Bytes
   proposals: [PluginProposal!]! @derivedFrom(field: "plugin")
   deposits: [PluginDeposit!]! @derivedFrom(field: "plugin")
+  judiciaries: [PluginJudiciary!]! @derivedFrom(field: "plugin")
 }
 
 type PluginMember @entity {
@@ -118,7 +119,7 @@ type PluginDeposit @entity(immutable: true) {
 type PluginJudiciary @entity {
   id: ID! # pluginId + block number
   member: Bytes!
-  snapshotBlock: BigInt!
+  snapshotBlock: BigInt
   plugin: Plugin!
   dao: Dao!
   txHash: Bytes

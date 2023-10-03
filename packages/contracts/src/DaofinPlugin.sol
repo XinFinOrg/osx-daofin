@@ -248,8 +248,6 @@ contract DaofinPlugin is
             address judiciary = judiciaries_[i];
 
             _addJudiciaryMember(judiciary);
-            // if (judiciary == address(0)) revert();
-            // _judiciaryCommittee[judiciary] = true;
         }
         _settings.allowedAmounts = allowedAmounts_;
         _daofinGlobalSettings = _settings;
@@ -319,8 +317,7 @@ contract DaofinPlugin is
         proposal_.parameters.startDate = _startDate;
         proposal_.parameters.endDate = _endDate;
         proposal_.parameters.snapshotBlock = snapshotBlock.toUint64();
-        // proposal_.ope
-        // proposal_.parameters._tier = _tier;
+
         bytes32[] memory committeesList = getCommitteesList();
         for (uint i = 0; i < committeesList.length; ) {
             bytes32 committee = committeesList[i];
@@ -509,9 +506,8 @@ contract DaofinPlugin is
         return _judiciaryCommittee[_member];
     }
 
-    function addJudiciaryMember(
-        address _member
-    ) external auth(UPDATE_JUDICIARY_MAPPING_PERMISSION) {
+    function addJudiciaryMember(address _member) external {
+        if (!isJudiciaryMember(msg.sender)) revert();
         _addJudiciaryMember(_member);
     }
 
