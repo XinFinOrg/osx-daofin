@@ -1,26 +1,22 @@
+import DaoData from '../../dao-initial-data.json';
+import {DaofinPluginSetupParams} from '../../plugin-settings';
+import {ADDRESS_ZERO} from '../../test/unit-testing/daofin-common';
 import {
-  DAO_ENS_SUB_DOMAIN,
-  METADATA,
-  PLUGIN_REPO_ENS_NAME,
-  PLUGIN_SETUP_CONTRACT_NAME,
-  XdcValidator,
-} from '../../plugin-settings';
-import {getPluginInfo} from '../../utils/helpers';
-import {GasFeeEstimation} from '@xinfin/osx-client-common';
-import {SupportedNetwork} from '@xinfin/osx-client-common';
+  JudiciaryCommittee,
+  MasterNodeCommittee,
+  PeoplesHouseCommittee,
+  encodePlugin,
+  getPluginInfo,
+} from '../../utils/helpers';
+import {uploadToIPFS} from '../../utils/ipfs';
 import {
-  MetadataAbiInput,
-  getNamedTypesFromMetadata,
-} from '@xinfin/osx-client-common';
-import {activeContractsList} from '@xinfin/osx-ethers';
-import {
-  Client,
-  Context,
-  ContextParams,
-  CreateDaoParams,
-  DaoCreationSteps,
-  DaoMetadata,
-} from '@xinfin/osx-sdk-client';
+  DAOFactory,
+  DAOFactory__factory,
+  DAORegistry__factory,
+  PluginRepo__factory,
+  PluginSetupProcessor__factory,
+  activeContractsList,
+} from '@xinfin/osx-ethers';
 import {PermissionIds} from '@xinfin/osx-sdk-client';
 import {
   bytesToHex,
@@ -29,8 +25,7 @@ import {
   hexToBytes,
 } from '@xinfin/osx-sdk-common';
 import {BigNumber, BigNumberish} from 'ethers';
-import {defaultAbiCoder, parseEther} from 'ethers/lib/utils';
-import {deployments, ethers, network} from 'hardhat';
+import {id, parseEther, toUtf8Bytes} from 'ethers/lib/utils';
 import {DeployFunction} from 'hardhat-deploy/types';
 import {HardhatRuntimeEnvironment} from 'hardhat/types';
 
@@ -48,127 +43,181 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     ? process.env.NETWORK_NAME
     : hre.network.name;
 
-  const contextParams: ContextParams = {
-    // @ts-ignore
-    daoFactoryAddress: activeContractsList[network].DAOFactory,
-    network: {
-      name: network,
-      chainId: hre.network.config.chainId ? hre.network.config.chainId : 0,
-    },
-    signer: deployer ?? undefined,
-    // @ts-ignore
-    web3Providers: hre.network.config.url,
-    ipfsNodes: [
-      {
-        url: process.env.IPFS_URL as string,
-        headers: {
-          Authorization: `Basic ${Buffer.from(
-            process.env.IPFS_API_KEY + ':' + process.env.IPFS_API_SECRET
-          ).toString('base64')}`,
-        },
-      },
-    ],
-    // @ts-ignore
-    ensRegistryAddress: activeContractsList[network].ENSRegistry,
-    graphqlNodes: [{url: process.env.GRAPH_NODE_URL as string}],
-  };
+  const {METADATA} = DaofinPluginSetupParams;
 
-  const context = new Context(contextParams);
-  const client = new Client(context);
+  // @ts-ignore
+  const daoFactoryAddress = activeContractsList[network].DAOFactory;
+  // @ts-ignore
+  const daoParams = DaoData[network];
+  const avatarUri = `ipfs://${await uploadToIPFS(
+    daoParams.metadata.avatar,
+    false
+  )}`;
 
-  const installedPluginParams: DaofinPluginInstall = {
-    globalSettings: {
-      xdcValidator: XdcValidator,
-      amounts: [parseEther('1').toString(), parseEther('2').toString()],
-    },
-    committeeSettings: [
-      [
-        ethers.utils.solidityKeccak256(['string'], ['MasterNodeCommittee']),
-        '1000',
-        '10',
-        '1000',
-        '1000',
-      ],
-    ],
-    electionPeriods: [
-      BigNumber.from(Date.now().toString()),
-      BigNumber.from((Date.now() + 60 * 1000 * 60).toString()),
-    ],
-  };
+  const metadataUri = `ipfs://${await uploadToIPFS(
+    JSON.stringify({
+      ...daoParams.metadata,
+      avatar: avatarUri,
+    }),
+    false
+  )}`;
 
-  const {committeeSettings, electionPeriods, globalSettings} =
-    installedPluginParams;
-  const {amounts, xdcValidator} = globalSettings;
+  const pluginInfo = getPluginInfo(network);
+
   const params = [
-    amounts,
-    xdcValidator,
+    daoParams.amounts.map((amount: string) => parseEther(amount)),
+    daoParams.xdcValidatorAddress,
     [
       [
-        ethers.utils.solidityKeccak256(['string'], ['MasterNodeCommittee']),
-        BigNumber.from('100'),
-        BigNumber.from('100'),
-        BigNumber.from('100'),
-        BigNumber.from('100'),
+        MasterNodeCommittee,
+        daoParams.masterNodeVotingSettings.supportThreshold,
+        daoParams.masterNodeVotingSettings.minParticipation,
+        daoParams.masterNodeVotingSettings.minDuration,
+        daoParams.masterNodeVotingSettings.minVotingPower,
+      ],
+      [
+        JudiciaryCommittee,
+        daoParams.judiciaryVotingSettings.supportThreshold,
+        daoParams.judiciaryVotingSettings.minParticipation,
+        daoParams.judiciaryVotingSettings.minDuration,
+        daoParams.judiciaryVotingSettings.minVotingPower,
+      ],
+      [
+        PeoplesHouseCommittee,
+        daoParams.peoplesHouseVotingSettings.supportThreshold,
+        daoParams.peoplesHouseVotingSettings.minParticipation,
+        daoParams.peoplesHouseVotingSettings.minDuration,
+        daoParams.peoplesHouseVotingSettings.minVotingPower,
       ],
     ],
     [
       Math.floor(new Date().getTime() / 1000),
       Math.floor(new Date().getTime() / 1000) + 60 * 1000 * 60,
     ],
-    [deployer.address, '0x5bfC74606bdA5092cefdede1A89c14624F6bF198'],
+    daoParams.judiciaryList,
   ];
-  const metadata: DaoMetadata = {
-    name: 'benytesting003-1-5',
-    description: 'This is Hello description',
-    avatar: 'https://s2.coinmarketcap.com/static/img/coins/64x64/2634.png',
-    links: [],
-  };
-  const pluginInfo = getPluginInfo(network);
+  const plugins = [
+    {
+      data: hexToBytes(encodePlugin(params, METADATA)),
+      id: pluginInfo[network].address,
+    },
+  ];
+  console.log({
+    key: 'Plugin',
+    pluginRepoAddress: pluginInfo[network].address,
+  });
 
-  const createDaoParams: CreateDaoParams = {
-    metadataUri: '0x00',
-    ensSubdomain: DAO_ENS_SUB_DOMAIN, // my-org.dao.eth
-    plugins: [
-      {
-        data: hexToBytes(
-          defaultAbiCoder.encode(
-            getNamedTypesFromMetadata(
-              // @ts-ignore
-              METADATA.build.pluginSetup.prepareInstallation.inputs
-            ),
-            params
-          )
-        ),
-        id: pluginInfo[network].address,
-      },
-    ], // plugin array cannot be empty or the transaction will fail. you need at least one governance mechanism to create your DAO.
-  };
+  if (
+    daoParams.daoEnsSubDomain &&
+    !daoParams.daoEnsSubDomain.match(/^[a-z0-9\-]+$/)
+  ) {
+    throw new Error();
+  }
 
-  // Estimate how much gas the transaction will cost.
-  const estimatedGas: GasFeeEstimation = await client.estimation.createDao(
-    createDaoParams
+  const daoFactoryInstance = DAOFactory__factory.connect(
+    daoFactoryAddress,
+    deployer
   );
-  console.log({avg: estimatedGas.average, maximum: estimatedGas.max});
 
-  // Create the DAO.
-  const steps = client.methods.createDao(createDaoParams);
-  for await (const step of steps) {
-    try {
-      switch (step.key) {
-        case DaoCreationSteps.CREATING:
-          console.log({txHash: step.txHash});
-          break;
-        case DaoCreationSteps.DONE:
-          console.log({
-            daoAddress: step.address,
-            pluginAddresses: step.pluginAddresses,
-          });
-          break;
-      }
-    } catch (err) {
-      console.error(err);
+  const pluginInstallationData: DAOFactory.PluginSettingsStruct[] = [];
+  for (const plugin of plugins) {
+    const repo = PluginRepo__factory.connect(plugin.id, deployer);
+
+    const currentRelease = await repo.latestRelease();
+    const latestVersion = await repo['getLatestVersion(uint8)'](currentRelease);
+    pluginInstallationData.push({
+      pluginSetupRef: {
+        pluginSetupRepo: repo.address,
+        versionTag: latestVersion.tag,
+      },
+      data: plugin.data,
+    });
+  }
+
+  // check if at least one plugin requests EXECUTE_PERMISSION on the DAO
+  // This check isn't 100% correct all the time
+  // simulate the DAO creation to get an address
+  const pluginSetupProcessorAddr =
+    await daoFactoryInstance.pluginSetupProcessor();
+  const pluginSetupProcessor = PluginSetupProcessor__factory.connect(
+    pluginSetupProcessorAddr,
+    deployer
+  );
+  let execPermissionFound = false;
+
+  // using the DAO base because it reflects a newly created DAO the best
+  const daoBaseAddr = await daoFactoryInstance.daoBase();
+  // simulates each plugin installation seperately to get the requested permissions
+  for (const installData of pluginInstallationData) {
+    const pluginSetupProcessorResponse =
+      await pluginSetupProcessor.callStatic.prepareInstallation(
+        daoBaseAddr,
+        installData
+      );
+    const found = pluginSetupProcessorResponse[1].permissions.find(
+      permission =>
+        permission.permissionId === PermissionIds.EXECUTE_PERMISSION_ID
+    );
+
+    if (found) {
+      execPermissionFound = true;
+      break;
     }
   }
+
+  if (!execPermissionFound) {
+    throw new Error();
+  }
+
+  const tx = await daoFactoryInstance.connect(deployer).createDao(
+    {
+      subdomain: daoParams.daoEnsSubDomain,
+      metadata: toUtf8Bytes(metadataUri),
+      daoURI: '',
+      trustedForwarder: ADDRESS_ZERO,
+    },
+    pluginInstallationData
+  );
+  console.log({
+    key: 'CREATING',
+    txHash: tx.hash,
+  });
+
+  // start tx
+  const receipt = await tx.wait();
+  const daoFactoryInterface = DAORegistry__factory.createInterface();
+
+  // find dao address using the dao registry address
+  const log = receipt.logs?.find(
+    e =>
+      e.topics[0] ===
+      id(daoFactoryInterface.getEvent('DAORegistered').format('sighash'))
+  );
+
+  if (!log) {
+    throw new Error();
+  }
+
+  // Plugin logs
+  const pspInterface = PluginSetupProcessor__factory.createInterface();
+  const installedLogs = receipt.logs?.filter(
+    e =>
+      e.topics[0] ===
+      id(pspInterface.getEvent('InstallationApplied').format('sighash'))
+  );
+
+  // DAO logs
+  const parsedLog = daoFactoryInterface.parseLog(log);
+  if (!parsedLog.args['dao']) {
+    throw new Error();
+  }
+  console.log({
+    key: 'DONE',
+    address: parsedLog.args['dao'],
+    pluginAddresses: installedLogs.map(
+      log => pspInterface.parseLog(log).args[1]
+    ),
+  });
 };
 
 export default func;

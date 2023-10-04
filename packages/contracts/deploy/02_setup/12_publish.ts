@@ -1,16 +1,18 @@
-import {
-  METADATA,
-  PLUGIN_CONTRACT_NAME,
-  PLUGIN_REPO_ENS_NAME,
-  PLUGIN_SETUP_CONTRACT_NAME,
-  VERSION,
-} from '../../plugin-settings';
+import {DaofinPluginSetupParams} from '../../plugin-settings';
 import {addCreatedVersion, getPluginInfo} from '../../utils/helpers';
 import {toHex} from '../../utils/ipfs';
 import {uploadToIPFS} from '../../utils/ipfs';
 import {PluginRepo__factory, PluginSetup__factory} from '@aragon/osx-ethers';
 import {DeployFunction} from 'hardhat-deploy/types';
 import {HardhatRuntimeEnvironment} from 'hardhat/types';
+
+const {
+  PLUGIN_SETUP_CONTRACT_NAME,
+  METADATA,
+  PLUGIN_CONTRACT_NAME,
+  PLUGIN_REPO_ENS_NAME,
+  VERSION,
+} = DaofinPluginSetupParams;
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log(

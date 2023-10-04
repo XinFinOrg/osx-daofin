@@ -1,0 +1,41 @@
+{
+  "apothem": {
+    "daoEnsSubDomain": "helofromhere-3",
+    "metadata": {
+      "name": "Hi",
+      "description": "This is Hello description",
+      "avatar": "https://s2.coinmarketcap.com/static/img/coins/64x64/2634.png",
+      "links": [
+        {
+          "name": "Dev communtiy",
+          "url": "https://xdc.dev"
+        },
+        {
+          "name": "Official Website",
+          "url": "https://xdc.org"
+        }
+      ]
+    },
+    "amounts": ["1", "2"],
+    "xdcValidatorAddress": "0x0000000000000000000000000000000000000088",
+    "judiciaryList": ["0x5bfC74606bdA5092cefdede1A89c14624F6bF198"],
+    "masterNodeVotingSettings": {
+      "supportThreshold": "0",
+      "minParticipation": "0",
+      "minDuration": "0",
+      "minVotingPower": "0"
+    },
+    "judiciaryVotingSettings": {
+      "supportThreshold": "0",
+      "minParticipation": "0",
+      "minDuration": "0",
+      "minVotingPower": "0"
+    },
+    "peoplesHouseVotingSettings": {
+      "supportThreshold": "0",
+      "minParticipation": "0",
+      "minDuration": "0",
+      "minVotingPower": "0"
+    }
+  }
+}

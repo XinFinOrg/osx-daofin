@@ -1,3 +1,4 @@
+import {getNamedTypesFromMetadata} from '@xinfin/osx-client-common';
 import {activeContractsList} from '@xinfin/osx-ethers';
 import {ContractFactory, ContractTransaction} from 'ethers';
 import {
@@ -228,3 +229,16 @@ export async function deployWithProxy<T>(
 export async function timestampIn(durationInSec: number): Promise<number> {
   return (await ethers.provider.getBlock('latest')).timestamp + durationInSec;
 }
+
+export function encodePlugin(params: any, METADATA: any) {
+  return defaultAbiCoder.encode(
+    getNamedTypesFromMetadata(
+      // @ts-ignore
+      METADATA.build.pluginSetup.prepareInstallation.inputs
+    ),
+    params
+  );
+}
+export const MasterNodeCommittee = ethers.utils.id('MASTER_NODE_COMMITTEE');
+export const PeoplesHouseCommittee = ethers.utils.id('PEOPLES_HOUSE_COMMITTEE');
+export const JudiciaryCommittee = ethers.utils.id('JUDICIARY_COMMITTEE');

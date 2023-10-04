@@ -1,4 +1,4 @@
-import {PLUGIN_REPO_ENS_NAME} from '../../plugin-settings';
+import {DaofinPluginSetupParams} from '../../plugin-settings';
 import {
   findEventTopicLog,
   addDeployedRepo as addCreatedRepo,
@@ -13,6 +13,7 @@ import {DeployFunction} from 'hardhat-deploy/types';
 import {HardhatRuntimeEnvironment} from 'hardhat/types';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+  const {PLUGIN_REPO_ENS_NAME} = DaofinPluginSetupParams;
   console.log(`\nDeploying the "${PLUGIN_REPO_ENS_NAME}" plugin repo`);
 
   const {network, ethers, deployments, getNamedAccounts} = hre;
@@ -24,8 +25,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const pluginRepoFactoryAddr: string = getPluginRepoFactoryAddress(
     network.name
   );
-  // console.log(signer);
-
   // const pluginRepoFactory = PluginRepoFactory__factory.connect(
   //   pluginRepoFactoryAddr,
   //   signer

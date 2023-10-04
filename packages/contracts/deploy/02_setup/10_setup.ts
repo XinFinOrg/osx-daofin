@@ -1,6 +1,8 @@
-import {PLUGIN_SETUP_CONTRACT_NAME} from '../../plugin-settings';
+import {DaofinPluginSetupParams} from '../../plugin-settings';
 import {DeployFunction} from 'hardhat-deploy/types';
 import {HardhatRuntimeEnvironment} from 'hardhat/types';
+
+const {PLUGIN_SETUP_CONTRACT_NAME} = DaofinPluginSetupParams;
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log(`\nDeploying ${PLUGIN_SETUP_CONTRACT_NAME}`);
