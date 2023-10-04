@@ -35,6 +35,7 @@ export interface IDaofinClientMethods {
   ) => Promise<boolean>;
   deposit: (amount: BigNumberish) => AsyncGenerator<DepositStepValue>;
   addjudiciary: (member: string) => AsyncGenerator<AddJudiciaryStepValue>;
+  isJudiciaryMember: (member: string) => Promise<boolean>;
 }
 export interface IDaofinClientEncoding {}
 export interface IDaofinClientDecoding {

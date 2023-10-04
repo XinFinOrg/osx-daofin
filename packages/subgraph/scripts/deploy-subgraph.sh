@@ -39,6 +39,13 @@ echo '> Deploying subgraph: '$FULLNAME
 echo '> Subgraph version: '$SUBGRAPH_VERSION
 
 # Deploy subgraph
-graph deploy $FULLNAME \
+if [$LOCAL == true]
+then 
+  graph deploy $FULLNAME \
         --ipfs http://localhost:5001 \
         --node http://localhost:8020
+else 
+  graph deploy $FULLNAME \
+        --ipfs https://ipfs.apothem.network \
+        --node https://graph.apothem.network
+fi

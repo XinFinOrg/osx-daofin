@@ -255,4 +255,13 @@ export class DaofinClientMethods
       member: _member,
     };
   }
+  isJudiciaryMember: (member: string) => Promise<boolean> = async (member) => {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    const isJudiciaryMember = await daofin.isJudiciaryMember(member);
+    if (!isJudiciaryMember) return null;
+    return isJudiciaryMember;
+  };
 }

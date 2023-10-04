@@ -1,7 +1,7 @@
 {
   "name": "@xinfin/osx-daofin-sdk-client",
   "author": "Aragon Association",
-  "version": "1.0.47",
+  "version": "1.0.48",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/osx-daofin-sdk-client.esm.js",

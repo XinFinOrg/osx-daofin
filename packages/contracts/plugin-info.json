@@ -1,9 +1,9 @@
 {
   "apothem": {
-    "repo": "beny-plugin-repo-10012",
-    "address": "0x6dFD751072b8E35794C7230fC2AD49a4841D2860",
+    "repo": "beny-plugin-repo-10013",
+    "address": "0xBade174E466B98602C5b3FF555d8BcD8360fF10a",
     "args": [],
-    "blockNumberOfDeployment": 55168427,
+    "blockNumberOfDeployment": 55224355,
     "releases": {
       "1": {
         "builds": {
@@ -22,7 +22,7 @@
             },
             "helpers": [],
             "buildMetadataURI": "ipfs://QmYkd6CnaDpeeHg2YnaHCFFRtdvBYw1p3R25skJKCgqZot",
-            "blockNumberOfPublication": 55168433
+            "blockNumberOfPublication": 55224361
           }
         },
         "releaseMetadataURI": "ipfs://QmbJWAESqCsf4RFCqEY7jecCashj8usXiyDNfKtZCwwzGb"
