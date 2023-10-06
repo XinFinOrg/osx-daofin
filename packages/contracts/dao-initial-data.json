@@ -1,9 +1,9 @@
 {
   "apothem": {
-    "daoEnsSubDomain": "helofromhere-3",
+    "daoEnsSubDomain": "thisissometext-0",
     "metadata": {
-      "name": "Hi",
-      "description": "This is Hello description",
+      "name": "DAOFIN",
+      "description": "This is DAOFIN",
       "avatar": "https://s2.coinmarketcap.com/static/img/coins/64x64/2634.png",
       "links": [
         {
@@ -21,21 +21,21 @@
     "judiciaryList": ["0x5bfC74606bdA5092cefdede1A89c14624F6bF198"],
     "masterNodeVotingSettings": {
       "supportThreshold": "0",
-      "minParticipation": "0",
+      "minParticipation": "2",
       "minDuration": "0",
-      "minVotingPower": "0"
+      "minVotingPower": "1"
     },
     "judiciaryVotingSettings": {
       "supportThreshold": "0",
-      "minParticipation": "0",
+      "minParticipation": "2",
       "minDuration": "0",
-      "minVotingPower": "0"
+      "minVotingPower": "1"
     },
     "peoplesHouseVotingSettings": {
       "supportThreshold": "0",
       "minParticipation": "0",
       "minDuration": "0",
-      "minVotingPower": "0"
+      "minVotingPower": "1"
     }
   }
 }

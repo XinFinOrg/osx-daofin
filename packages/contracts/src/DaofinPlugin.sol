@@ -199,6 +199,9 @@ contract DaofinPlugin is
 
         require(snapshotBlockNumber > _voterToLockedAmounts[_voter].blockNumber);
 
+        if (isMasterNodeDelegatee(_voter)) revert();
+        if (isJudiciaryMember(_voter)) revert();
+
         _voterToLockedAmounts[_voter].amount += _value;
         _voterToLockedAmounts[_voter].blockNumber = snapshotBlockNumber;
 
