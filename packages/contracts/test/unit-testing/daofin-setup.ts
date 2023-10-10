@@ -1,4 +1,4 @@
-import {PLUGIN_SETUP_CONTRACT_NAME} from '../../plugin-settings';
+import {DaofinPluginSetupParams} from '../../plugin-settings';
 import buildMetadata from '../../src/build-metadata.json';
 import {
   DAO,
@@ -29,6 +29,7 @@ import {expect} from 'chai';
 import {parseEther} from 'ethers/lib/utils';
 import {ethers} from 'hardhat';
 
+const {PLUGIN_SETUP_CONTRACT_NAME} = DaofinPluginSetupParams;
 describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
   let signers: SignerWithAddress[];
   let daofinPluginSetup: DaofinPluginSetup;

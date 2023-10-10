@@ -3,6 +3,7 @@ import {
   CreateProposalParams,
   DepositStepValue,
   GlobalSettings,
+  UpdateOrJoinMasterNodeDelegateeStepValue,
 } from '../types';
 import { BigNumberish } from '@ethersproject/bignumber';
 import { InterfaceParams } from '@xinfin/osx-client-common';
@@ -36,6 +37,11 @@ export interface IDaofinClientMethods {
   deposit: (amount: BigNumberish) => AsyncGenerator<DepositStepValue>;
   addjudiciary: (member: string) => AsyncGenerator<AddJudiciaryStepValue>;
   isJudiciaryMember: (member: string) => Promise<boolean>;
+  updateOrJoinMasterNodeDelegatee: (
+    delegatee: string
+  ) => AsyncGenerator<UpdateOrJoinMasterNodeDelegateeStepValue>;
+  isMasterNodeDelegatee: (delegatee: string) => Promise<boolean>;
+  isPeopleHouse: (member: string) => Promise<boolean>;
 }
 export interface IDaofinClientEncoding {}
 export interface IDaofinClientDecoding {

@@ -1,8 +1,14 @@
-import {PLUGIN_CONTRACT_NAME} from '../../plugin-settings';
-import {DAO, DaofinPlugin, DaofinPlugin__factory} from '../../typechain';
+import {DaofinPluginSetupParams} from '../../plugin-settings';
+import {
+  DAO,
+  DaofinPlugin,
+  DaofinPlugin__factory,
+  XDCValidator,
+} from '../../typechain';
 import {ProposalCreatedEvent} from '../../typechain/src/DaofinPlugin';
 import {deployWithProxy} from '../../utils/helpers';
 import {deployTestDao} from '../helpers/test-dao';
+import {deployXDCValidator} from '../helpers/test-xdc-validator';
 import {PROPOSAL_EVENTS} from '../helpers/types';
 import {
   ADDRESS_ONE,
@@ -24,7 +30,7 @@ export type InitData = {number: BigNumber};
 export const defaultInitData: InitData = {
   number: BigNumber.from(123),
 };
-
+const {PLUGIN_CONTRACT_NAME} = DaofinPluginSetupParams;
 describe(PLUGIN_CONTRACT_NAME, function () {
   let signers: SignerWithAddress[];
   let dao: DAO;
@@ -36,14 +42,19 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let Alice: SignerWithAddress;
   let Bob: SignerWithAddress;
   let Mike: SignerWithAddress;
+  let John: SignerWithAddress;
+  let xdcValidatorMock: XDCValidator;
   before(async () => {
     signers = await ethers.getSigners();
     Alice = signers[0];
     Bob = signers[1];
     Mike = signers[2];
+    John = signers[3];
+
     dao = await deployTestDao(Alice);
 
     DaofinPlugin = new DaofinPlugin__factory(Alice);
+    xdcValidatorMock = await deployXDCValidator(Alice);
   });
 
   beforeEach(async () => {
@@ -179,12 +190,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   });
 
   describe('create proposal', async () => {
-    let Alice: SignerWithAddress;
-    let Bob: SignerWithAddress;
-    before(async () => {
-      Alice = signers[0];
-      Bob = signers[1];
-    });
     beforeEach(async () => {
       initializeParams = [
         dao.address,
@@ -214,7 +219,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
           },
         ],
         [Math.floor(Date.now() / 1000)],
-        [ADDRESS_ONE],
+        [Bob.address, Mike.address, John.address],
       ];
     });
     it('must not revert', async () => {
@@ -333,6 +338,13 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         expect(proposal.proposer).be.eq(Alice.address);
         expect(proposal.proposer).not.be.eq(Bob.address);
       });
+      it('proposer should not be part of any committees', async () => {
+        const proposalId = await daofinPlugin.callStatic.createProposal(
+          ...createPropsalParams
+        );
+        expect(await daofinPlugin.createProposal(...createPropsalParams))
+          .reverted;
+      });
       it('actions should fill', async () => {
         createPropsalParams[1] = [
           {
@@ -390,7 +402,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
           },
         ],
         [Math.floor(Date.now() / 1000)],
-        [ADDRESS_ONE],
+        [Bob.address, Mike.address, John.address],
       ];
     });
 
@@ -546,22 +558,124 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     it('should return a right name', async () => {
       await daofinPlugin.initialize(...initializeParams);
       await daofinPlugin
-        .connect(Bob)
+        .connect(Mike)
         .deposit({value: parseEther('1').toString()});
 
-      expect(await daofinPlugin.findCommitteeName(ADDRESS_ONE)).be.eq(
-        BYTES32_ZERO
-      );
-
-      expect(await daofinPlugin.findCommitteeName(Bob.address)).be.eq(
-        JudiciaryCommittee
-      );
-      expect(await daofinPlugin.findCommitteeName(Bob.address)).not.be.eq(
+      expect(await daofinPlugin.findCommitteeName(Mike.address)).be.eq(
         PeoplesHouseCommittee
       );
-      expect(await daofinPlugin.findCommitteeName(Bob.address)).not.be.eq(
-        MasterNodeCommittee
+
+      expect(await daofinPlugin.findCommitteeName(Bob.address)).eq(
+        JudiciaryCommittee
       );
+
+      expect(await daofinPlugin.findCommitteeName(John.address)).be.eq(
+        BYTES32_ZERO
+      );
+    });
+
+    it('should not return false for isPeoplesHouse', async () => {
+      await daofinPlugin.initialize(...initializeParams);
+      await daofinPlugin
+        .connect(Mike)
+        .deposit({value: parseEther('1').toString()});
+
+      expect(await daofinPlugin.isPeopleHouse(Mike.address)).be.true;
+    });
+  });
+
+  describe('Master Node delegatee', async () => {
+    let JudiciaryCommittee: string,
+      MasterNodeCommittee: string,
+      PeoplesHouseCommittee: string;
+    before(async () => {
+      JudiciaryCommittee = await daofinPlugin.JudiciaryCommittee();
+      MasterNodeCommittee = await daofinPlugin.MasterNodeCommittee();
+      PeoplesHouseCommittee = await daofinPlugin.PeoplesHouseCommittee();
+
+      xdcValidatorMock = await deployXDCValidator(Alice);
+
+      initializeParams = [
+        dao.address,
+        [
+          parseEther('1'),
+          parseEther('2'),
+          parseEther('3'),
+          parseEther('4'),
+          parseEther('5'),
+          parseEther('10'),
+          parseEther('100'),
+        ],
+        xdcValidatorMock.address,
+        [
+          {
+            name: MasterNodeCommittee,
+            minDuration: 1,
+            minParticipation: 1,
+            minVotingPower: 1,
+            supportThreshold: 1,
+          },
+          {
+            name: JudiciaryCommittee,
+            minDuration: 1,
+            minParticipation: 1,
+            minVotingPower: 1,
+            supportThreshold: 1,
+          },
+          {
+            name: PeoplesHouseCommittee,
+            minDuration: 1,
+            minParticipation: 1,
+            minVotingPower: 1,
+            supportThreshold: 1,
+          },
+        ],
+        [Math.floor(Date.now() / 1000)],
+        [Bob.address],
+      ];
+    });
+
+    it('should not revert (updateOrJoinMasterNodeDelegatee)', async () => {
+      await daofinPlugin.initialize(...initializeParams);
+      await xdcValidatorMock.addCandidate(Mike.address);
+
+      expect(
+        await daofinPlugin
+          .connect(Mike)
+          .updateOrJoinMasterNodeDelegatee(John.address)
+      ).not.reverted;
+    });
+    it('should be added to master node mapping', async () => {
+      await daofinPlugin.initialize(...initializeParams);
+      await xdcValidatorMock.addCandidate(Mike.address);
+    });
+    it('should not be the same or zero address', async () => {
+      await daofinPlugin.initialize(...initializeParams);
+
+      await xdcValidatorMock.addCandidate(Mike.address);
+
+      await expect(
+        daofinPlugin.connect(Mike).updateOrJoinMasterNodeDelegatee(Mike.address)
+      ).to.reverted;
+
+      await expect(
+        daofinPlugin.connect(Mike).updateOrJoinMasterNodeDelegatee(ADDRESS_ZERO)
+      ).to.reverted;
+
+      await expect(
+        daofinPlugin.connect(Mike).updateOrJoinMasterNodeDelegatee(Bob.address)
+      ).to.not.reverted;
+    });
+    it('should be emitted', async () => {
+      await daofinPlugin.initialize(...initializeParams);
+
+      await xdcValidatorMock.addCandidate(Mike.address);
+
+      await expect(
+        daofinPlugin.connect(Mike).updateOrJoinMasterNodeDelegatee(John.address)
+      )
+        .to.emit(daofinPlugin, 'MasterNodeDelegateeUpdated')
+        .withArgs(Mike.address, John.address);
     });
   });
 
@@ -573,10 +687,13 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       JudiciaryCommittee = await daofinPlugin.JudiciaryCommittee();
       MasterNodeCommittee = await daofinPlugin.MasterNodeCommittee();
       PeoplesHouseCommittee = await daofinPlugin.PeoplesHouseCommittee();
+
+      xdcValidatorMock = await deployXDCValidator(Alice);
+
       initializeParams = [
         dao.address,
         [parseEther('10'), parseEther('20'), parseEther('30')],
-        XdcValidator,
+        xdcValidatorMock.address,
         [
           {
             name: MasterNodeCommittee,
@@ -596,7 +713,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
             name: PeoplesHouseCommittee,
             minDuration: 1,
             minParticipation: 1,
-            minVotingPower: 1,
+            minVotingPower: 0,
             supportThreshold: 1,
           },
         ],
@@ -616,26 +733,14 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         0,
       ];
     });
-    beforeEach(async () => {
-      await daofinPlugin.initialize(...initializeParams);
-    });
-    it('vote must not vote without depositing', async () => {
-      const proposalId = await daofinPlugin.callStatic.createProposal(
-        ...createPropsalParams
-      );
-      await daofinPlugin.createProposal(...createPropsalParams);
-      await expect(daofinPlugin.vote(proposalId, '2', false)).be.revertedWith(
-        'Daofin: deposit first'
-      );
-    });
     it('voter should vote once on one proposal', async () => {
+      await daofinPlugin.initialize(...initializeParams);
       const proposalId = await daofinPlugin.callStatic.createProposal(
         ...createPropsalParams
       );
       await daofinPlugin.createProposal(...createPropsalParams);
-      await daofinPlugin
-        .connect(Bob)
-        .deposit({value: parseEther('10').toString()});
+
+      await xdcValidatorMock.addCandidate(Bob.address);
       await expect(
         daofinPlugin.connect(Bob).vote(proposalId, '2', false)
       ).be.not.revertedWith('Daofin: already voted');
@@ -645,85 +750,319 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       );
       expect(isVoted).be.true;
     });
-    it('voter connot vote twice on one proposal', async () => {
+    it('vote must be reverted with in valid voter', async () => {
+      await daofinPlugin.initialize(...initializeParams);
       const proposalId = await daofinPlugin.callStatic.createProposal(
         ...createPropsalParams
       );
       await daofinPlugin.createProposal(...createPropsalParams);
-      await daofinPlugin
-        .connect(Bob)
-        .deposit({value: parseEther('10').toString()});
 
       await expect(
-        daofinPlugin.connect(Bob).vote(proposalId, '2', false)
-      ).be.not.revertedWith('Daofin: already voted');
-
-      await expect(
-        daofinPlugin.connect(Bob).vote(proposalId, '2', false)
-      ).be.revertedWith('Daofin: already voted');
+        daofinPlugin.connect(John).vote(proposalId, '2', false)
+      ).be.revertedWith('Daofin: invalid voter');
     });
-    it('vote must come from a valid voter committee', async () => {
-      const proposalId = await daofinPlugin.callStatic.createProposal(
-        ...createPropsalParams
-      );
-      await daofinPlugin.createProposal(...createPropsalParams);
+    context('Master Node Committee', async () => {
+      beforeEach(async () => {
+        await daofinPlugin.initialize(...initializeParams);
+        // xdcValidatorMock = await deployXDCValidator(Alice);
+      });
+      before(() => {
+        initializeParams = [
+          dao.address,
+          [parseEther('10'), parseEther('20'), parseEther('30')],
+          xdcValidatorMock.address,
+          [
+            {
+              name: MasterNodeCommittee,
+              minDuration: 1,
+              minParticipation: 1,
+              minVotingPower: 2,
+              supportThreshold: 1,
+            },
+            {
+              name: JudiciaryCommittee,
+              minDuration: 1,
+              minParticipation: 1,
+              minVotingPower: 2,
+              supportThreshold: 1,
+            },
+            {
+              name: PeoplesHouseCommittee,
+              minDuration: 1,
+              minParticipation: 1,
+              minVotingPower: 0,
+              supportThreshold: 1,
+            },
+          ],
+          [Math.floor(Date.now() / 1000)],
+          [Bob.address],
+        ];
+      });
+      it('voter to info must change after vote()', async () => {
+        const proposalId = await daofinPlugin.callStatic.createProposal(
+          ...createPropsalParams
+        );
+        await daofinPlugin.createProposal(...createPropsalParams);
+        await xdcValidatorMock.addCandidate(Bob.address);
 
-      const commiteesList = await daofinPlugin.getCommitteesList();
-      for await (const committee of commiteesList) {
+        await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+
+        const voteInfo = await daofinPlugin.getProposalVoterToInfo(
+          proposalId,
+          Bob.address
+        );
+        expect(voteInfo.voted).be.true;
+        expect(voteInfo.option).be.eq(2);
+      });
+
+      it('voter address must be added into voters array', async () => {
+        const proposalId = await daofinPlugin.callStatic.createProposal(
+          ...createPropsalParams
+        );
+        await daofinPlugin.createProposal(...createPropsalParams);
+        await xdcValidatorMock.addCandidate(Bob.address);
+
+        await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+
+        const proposal = await daofinPlugin.getProposal(proposalId);
+        const findBob = proposal.voters.filter(voter => voter == Bob.address);
+        expect(findBob.length).be.eq(1);
+        expect(findBob.length).not.eq(0);
+      });
+
+      it('tally details must change afterwards', async () => {
+        const proposalId = await daofinPlugin.callStatic.createProposal(
+          ...createPropsalParams
+        );
+        await daofinPlugin.createProposal(...createPropsalParams);
+
+        await xdcValidatorMock.addCandidate(Mike.address);
+
         await daofinPlugin
-          .connect(Bob)
-          .deposit({value: parseEther('10').toString()});
-        await expect(
-          daofinPlugin.connect(Bob).vote(proposalId, '2', false)
-        ).be.not.revertedWith('Daofin: invalid voter');
-      }
+          .connect(Mike)
+          .updateOrJoinMasterNodeDelegatee(Bob.address);
+
+        await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+        const votingSettings = await daofinPlugin.getCommitteesToVotingSettings(
+          MasterNodeCommittee
+        );
+
+        const tallyDetails = await daofinPlugin.getProposalTallyDetails(
+          proposalId,
+          MasterNodeCommittee
+        );
+
+        // voting power -> 2
+        expect(tallyDetails.yes).be.eq(votingSettings.minVotingPower);
+        expect(tallyDetails.no.toNumber()).be.eq(0);
+        expect(tallyDetails.abstain.toNumber()).be.eq(0);
+      });
     });
-    it('voter to info must change after vote()', async () => {
-      const proposalId = await daofinPlugin.callStatic.createProposal(
-        ...createPropsalParams
-      );
-      await daofinPlugin.createProposal(...createPropsalParams);
-      await daofinPlugin
-        .connect(Bob)
-        .deposit({value: parseEther('10').toString()});
+    context('Judiciary Committee', async () => {
+      beforeEach(async () => {
+        await daofinPlugin.initialize(...initializeParams);
+      });
+      before(() => {
+        initializeParams = [
+          dao.address,
+          [parseEther('10'), parseEther('20'), parseEther('30')],
+          xdcValidatorMock.address,
+          [
+            {
+              name: MasterNodeCommittee,
+              minDuration: 1,
+              minParticipation: 1,
+              minVotingPower: 2,
+              supportThreshold: 1,
+            },
+            {
+              name: JudiciaryCommittee,
+              minDuration: 1,
+              minParticipation: 1,
+              minVotingPower: 2,
+              supportThreshold: 1,
+            },
+            {
+              name: PeoplesHouseCommittee,
+              minDuration: 1,
+              minParticipation: 1,
+              minVotingPower: 0,
+              supportThreshold: 1,
+            },
+          ],
+          [Math.floor(Date.now() / 1000)],
+          [Bob.address],
+        ];
+      });
+      it('Judicary can vote on proposal and must not be reverted', async () => {
+        const proposalId = await daofinPlugin.callStatic.createProposal(
+          ...createPropsalParams
+        );
+        await daofinPlugin
+          .connect(Alice)
+          .createProposal(...createPropsalParams);
 
-      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
-
-      const voteInfo = await daofinPlugin.getProposalVoterToInfo(
-        proposalId,
-        Bob.address
-      );
-      expect(voteInfo.voted).be.true;
-      expect(voteInfo.option).be.eq(2);
+        await expect(daofinPlugin.connect(Bob).vote(proposalId, '2', false)).not
+          .reverted;
+      });
     });
-    it('tally must change after vote()', async () => {
-      const proposalId = await daofinPlugin.callStatic.createProposal(
-        ...createPropsalParams
-      );
-      await daofinPlugin.createProposal(...createPropsalParams);
-      await daofinPlugin
-        .connect(Bob)
-        .deposit({value: parseEther('10').toString()});
+    context('Peoples House Committee', async () => {
+      beforeEach(async () => {
+        await daofinPlugin.initialize(...initializeParams);
+      });
+      before(async () => {
+        xdcValidatorMock = await deployXDCValidator(Alice);
 
-      const committee = await daofinPlugin.findCommitteeName(Bob.address);
+        initializeParams = [
+          dao.address,
+          [parseEther('10'), parseEther('20'), parseEther('30')],
+          xdcValidatorMock.address,
+          [
+            {
+              name: MasterNodeCommittee,
+              minDuration: 1,
+              minParticipation: 1,
+              minVotingPower: 2,
+              supportThreshold: 1,
+            },
+            {
+              name: JudiciaryCommittee,
+              minDuration: 1,
+              minParticipation: 1,
+              minVotingPower: 2,
+              supportThreshold: 1,
+            },
+            {
+              name: PeoplesHouseCommittee,
+              minDuration: 1,
+              minParticipation: 1,
+              minVotingPower: 0,
+              supportThreshold: 1,
+            },
+          ],
+          [Math.floor(Date.now() / 1000)],
+          [Bob.address],
+        ];
+      });
+      it('a random address can vote on proposal by deposting and must not be reverted', async () => {
+        const proposalId = await daofinPlugin.callStatic.createProposal(
+          ...createPropsalParams
+        );
+        await daofinPlugin
+          .connect(Alice)
+          .createProposal(...createPropsalParams);
 
-      const tallyBefore = await daofinPlugin.getProposalTallyDetails(
-        proposalId,
-        committee
-      );
+        await daofinPlugin.connect(Mike).deposit({value: parseEther('10')});
 
-      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+        await expect(daofinPlugin.connect(Mike).vote(proposalId, '2', false))
+          .not.reverted;
+      });
+      it('check tally details', async () => {
+        const proposalId = await daofinPlugin.callStatic.createProposal(
+          ...createPropsalParams
+        );
+        await daofinPlugin
+          .connect(Alice)
+          .createProposal(...createPropsalParams);
 
-      const tally = await daofinPlugin.getProposalTallyDetails(
-        proposalId,
-        committee
-      );
-      expect(tally.yes.toString()).be.eq(
-        tallyBefore.yes.add(tally.yes).toString()
-      );
-      expect(tally.no.toNumber()).be.eq(0);
-      expect(tally.abstain.toNumber()).be.eq(0);
+        await daofinPlugin.connect(Mike).deposit({value: parseEther('10')});
+
+        await daofinPlugin.connect(Mike).vote(proposalId, '2', false);
+
+        const tallyDetailsAfter = await daofinPlugin.getProposalTallyDetails(
+          proposalId,
+          PeoplesHouseCommittee
+        );
+        const totalDeposit = await daofinPlugin._voterToLockedAmounts(
+          Mike.address
+        );
+        expect(tallyDetailsAfter.yes).to.eq(totalDeposit.amount);
+      });
     });
+    context('After vote()', async () => {
+      beforeEach(async () => {
+        await daofinPlugin.initialize(...initializeParams);
+      });
+      before(async () => {
+        xdcValidatorMock = await deployXDCValidator(Alice);
+
+        initializeParams = [
+          dao.address,
+          [parseEther('10'), parseEther('20'), parseEther('30')],
+          xdcValidatorMock.address,
+          [
+            {
+              name: MasterNodeCommittee,
+              minDuration: 1,
+              minParticipation: 1,
+              minVotingPower: 2,
+              supportThreshold: 1,
+            },
+            {
+              name: JudiciaryCommittee,
+              minDuration: 1,
+              minParticipation: 1,
+              minVotingPower: 2,
+              supportThreshold: 1,
+            },
+            {
+              name: PeoplesHouseCommittee,
+              minDuration: 1,
+              minParticipation: 1,
+              minVotingPower: 0,
+              supportThreshold: 1,
+            },
+          ],
+          [Math.floor(Date.now() / 1000)],
+          [Bob.address],
+        ];
+      });
+      it('must emit event after all the operations', async () => {
+        const proposalId = await daofinPlugin.callStatic.createProposal(
+          ...createPropsalParams
+        );
+        await daofinPlugin
+          .connect(Alice)
+          .createProposal(...createPropsalParams);
+
+        await daofinPlugin.connect(Mike).deposit({value: parseEther('10')});
+
+        expect(daofinPlugin.connect(Mike).vote(proposalId, '2', false))
+          .to.emit(daofinPlugin, 'VoteReceived')
+          .withArgs(
+            proposalId,
+            Mike.address,
+            PeoplesHouseCommittee,
+            BigNumber.from('2')
+          );
+      });
+    });
+    //     ...createPropsalParams
+    //   );
+    //   await daofinPlugin.createProposal(...createPropsalParams);
+    //   await daofinPlugin
+    //     .connect(Bob)
+    //     .deposit({value: parseEther('10').toString()});
+
+    //   const committee = await daofinPlugin.findCommitteeName(Bob.address);
+
+    //   const tallyBefore = await daofinPlugin.getProposalTallyDetails(
+    //     proposalId,
+    //     committee
+    //   );
+
+    //   await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+
+    //   const tally = await daofinPlugin.getProposalTallyDetails(
+    //     proposalId,
+    //     committee
+    //   );
+    //   expect(tally.yes.toString()).be.eq(
+    //     tallyBefore.yes.add(tally.yes).toString()
+    //   );
+    //   expect(tally.no.toNumber()).be.eq(0);
+    //   expect(tally.abstain.toNumber()).be.eq(0);
+    // });
   });
   describe('canExecute', async () => {
     before(async () => {

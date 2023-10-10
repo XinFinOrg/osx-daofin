@@ -9,6 +9,8 @@ import {
   DepositSteps,
   GlobalSettings,
   SubgraphProposalBase,
+  UpdateOrJoinMasterNodeDelegateeStepValue,
+  UpdateOrJoinMasterNodeDelegateeSteps,
 } from '../../types';
 import { getPluginInstallationId, toProposalListItem } from '../../utils';
 import { ProposalQuery, ProposalsQuery } from '../graphql-queries/proposals';
@@ -61,6 +63,8 @@ export class DaofinClientMethods
       allowedAmounts: settings.allowedAmounts,
       xdcValidator: settings.xdcValidator,
       totalNumberOfMasterNodes: 0,
+      totalNumberOfJudiciaries: settings.totalNumberOfJudiciaries,
+      totalNumberOfPeoplesHouse: settings.totalNumberOfPeoplesHouse,
     };
   }
   getDaofin(): Promise<DaofinDetails> {
@@ -263,5 +267,42 @@ export class DaofinClientMethods
     const isJudiciaryMember = await daofin.isJudiciaryMember(member);
     if (!isJudiciaryMember) return null;
     return isJudiciaryMember;
+  };
+  public async *updateOrJoinMasterNodeDelegatee(
+    delegatee: string
+  ): AsyncGenerator<UpdateOrJoinMasterNodeDelegateeStepValue> {
+    const tx = await this.getDaofinInstance().updateOrJoinMasterNodeDelegatee(
+      delegatee
+    );
+
+    yield {
+      key: UpdateOrJoinMasterNodeDelegateeSteps.WAITING,
+      txHash: tx.hash,
+    };
+    await tx.wait();
+
+    yield {
+      key: UpdateOrJoinMasterNodeDelegateeSteps.DONE,
+    };
+  }
+  isMasterNodeDelegatee: (delegatee: string) => Promise<boolean> = async (
+    delegatee
+  ) => {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    const isMasterNodeDelegatee = await daofin.isMasterNodeDelegatee(delegatee);
+    if (!isMasterNodeDelegatee) return null;
+    return isMasterNodeDelegatee;
+  };
+  isPeopleHouse: (member: string) => Promise<boolean> = async (member) => {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    const isPeopleHouse = await daofin.isPeopleHouse(member);
+    if (!isPeopleHouse) return null;
+    return isPeopleHouse;
   };
 }

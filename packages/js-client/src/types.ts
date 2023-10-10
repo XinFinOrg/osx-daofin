@@ -68,3 +68,16 @@ export type AddJudiciaryStepValue =
       key: AddJudiciarySteps.DONE;
       member: string;
     };
+
+export enum UpdateOrJoinMasterNodeDelegateeSteps {
+  WAITING = 'WAITING',
+  DONE = 'DONE',
+}
+export type UpdateOrJoinMasterNodeDelegateeStepValue =
+  | {
+      key: UpdateOrJoinMasterNodeDelegateeSteps.WAITING;
+      txHash: string;
+    }
+  | {
+      key: UpdateOrJoinMasterNodeDelegateeSteps.DONE;
+    };

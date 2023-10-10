@@ -32,8 +32,6 @@ contract DaofinPluginSetup is PluginSetup {
                 _data,
                 (uint256[], address, DaofinPlugin.CommitteeVotingSettings[], uint64[], address[])
             );
-        // console.log(1, xdcValidator);
-        // console.log(2, allowedAmounts[0]);
         // Deploy plugin proxy
         plugin = createERC1967Proxy(
             address(daofinPluginBase),
