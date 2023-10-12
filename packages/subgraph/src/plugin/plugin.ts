@@ -6,19 +6,29 @@ import {
   PluginDeposit,
   PluginJudiciary,
   Dao,
+  PluginMasterNodeDelegatee,
 } from '../../generated/schema';
 import {
   ProposalCreated,
   Deposited,
   DaofinPlugin,
   JudiciaryChanged,
+  UpdateOrJoinMasterNodeDelegateeCall,
+  MasterNodeDelegateeUpdated,
 } from '../../generated/templates/DaofinPlugin/DaofinPlugin';
 import {
   getDepositId,
   getJudiciaryId,
+  getMasterNodeDelegateeId,
   getProposalId,
 } from '../../utils/proposals';
-import {Address, dataSource} from '@graphprotocol/graph-ts';
+import {
+  Address,
+  BigInt,
+  ByteArray,
+  Bytes,
+  dataSource,
+} from '@graphprotocol/graph-ts';
 
 export function handleProposalCreated(event: ProposalCreated): void {
   let context = dataSource.context();
@@ -126,4 +136,47 @@ export function handleJudiciaryChanged(event: JudiciaryChanged): void {
   entity.action = event.params._action;
   entity.snapshotBlock = event.block.number;
   entity.save();
+}
+export function handleMasterNodeDelegateeUpdated(
+  event: MasterNodeDelegateeUpdated
+): void {
+  let context = dataSource.context();
+  let daoId = context.getString('daoAddress');
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  let dao = Dao.load(daoId.toString());
+  if (!dao) return;
+  let plugin = Plugin.load(pluginInstallationId);
+  if (!plugin) return;
+
+  let id = getMasterNodeDelegateeId(
+    pluginInstallationId,
+    event.params._masterNode
+  );
+  let entity = PluginMasterNodeDelegatee.load(id);
+  if (entity) {
+    if (entity.masterNode == event.params._masterNode) {
+      if (entity.member != event.params._delegatee) {
+        entity.state = 'CHANGED';
+        entity.member = event.params._delegatee;
+        entity.updatedDate = event.block.timestamp;
+
+        entity.save();
+      }
+    }
+  } else {
+    entity = new PluginMasterNodeDelegatee(id);
+
+    entity.dao = daoId;
+    entity.plugin = pluginInstallationId;
+
+    entity.member = event.params._delegatee;
+    entity.masterNode = event.params._masterNode;
+    entity.creationDate = event.block.timestamp;
+    entity.snapshotBlock = event.block.number;
+
+    entity.action = BigInt.fromString('0');
+    entity.txHash = event.transaction.hash;
+
+    entity.save();
+  }
 }

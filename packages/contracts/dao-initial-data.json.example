@@ -1,6 +1,6 @@
 {
   "apothem": {
-    "daoEnsSubDomain": "thisissometext-0",
+    "daoEnsSubDomain": "dao-number-3000",
     "metadata": {
       "name": "DAOFIN",
       "description": "This is DAOFIN",
@@ -17,8 +17,11 @@
       ]
     },
     "amounts": ["1", "2"],
-    "xdcValidatorAddress": "0x0000000000000000000000000000000000000088",
-    "judiciaryList": ["0x5bfC74606bdA5092cefdede1A89c14624F6bF198"],
+    "xdcValidatorAddress": "0xB0658F0295bbBf918eec097F5730AE0AD6D8CF8a",
+    "judiciaryList": [
+      "0x5bfC74606bdA5092cefdede1A89c14624F6bF198",
+      "0x168c49bC0dcF7544318c4b094769E4d72a319944"
+    ],
     "masterNodeVotingSettings": {
       "supportThreshold": "0",
       "minParticipation": "2",
@@ -36,6 +39,7 @@
       "minParticipation": "0",
       "minDuration": "0",
       "minVotingPower": "1"
-    }
+    },
+    "dummyMasterNodeAddresses": ["0x7cFB093b4fca4845D73c72B23daa6C9A47C0b3f7"]
   }
 }

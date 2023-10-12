@@ -53,6 +53,8 @@ type Plugin implements PluginInstallation @entity {
   proposals: [PluginProposal!]! @derivedFrom(field: "plugin")
   deposits: [PluginDeposit!]! @derivedFrom(field: "plugin")
   judiciaries: [PluginJudiciary!]! @derivedFrom(field: "plugin")
+  masterNodeDelegatees: [PluginMasterNodeDelegatee!]!
+    @derivedFrom(field: "plugin")
 }
 
 type PluginMember @entity {
@@ -125,4 +127,17 @@ type PluginJudiciary @entity {
   txHash: Bytes
   action: BigInt!
   creationDate: BigInt
+}
+type PluginMasterNodeDelegatee @entity {
+  id: ID! # pluginId + block number
+  masterNode: Bytes!
+  member: Bytes!
+  action: BigInt!
+  state: String
+  snapshotBlock: BigInt
+  plugin: Plugin!
+  dao: Dao!
+  txHash: Bytes
+  creationDate: BigInt
+  updatedDate: BigInt
 }

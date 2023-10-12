@@ -2,7 +2,7 @@ import daofinBuildMetadata from './src/build-metadata.json';
 import daofinReleaseMetadata from './src/release-metadata.json';
 
 export const DaofinPluginSetupParams: PluginSetupParams = {
-  PLUGIN_REPO_ENS_NAME: 'beny-plugin-repo-10014',
+  PLUGIN_REPO_ENS_NAME: 'beny-plugin-repo-2000',
   PLUGIN_CONTRACT_NAME: 'DaofinPlugin',
   PLUGIN_SETUP_CONTRACT_NAME: 'DaofinPluginSetup',
   VERSION: {
@@ -13,6 +13,7 @@ export const DaofinPluginSetupParams: PluginSetupParams = {
     build: daofinBuildMetadata,
     release: daofinReleaseMetadata,
   },
+  XDCMasterNodeTestingAddress: '0xB0658F0295bbBf918eec097F5730AE0AD6D8CF8a',
 };
 
 // Types
@@ -29,4 +30,5 @@ export type PluginSetupParams = {
     build: {[k: string]: any};
     release: {[k: string]: any};
   };
+  XDCMasterNodeTestingAddress: string;
 };

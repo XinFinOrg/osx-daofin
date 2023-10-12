@@ -36,3 +36,9 @@ export function getJudiciaryId(
     .concat('_')
     .concat(bigIntToBytes32(blockNumber));
 }
+export function getMasterNodeDelegateeId(
+  pluginId: string,
+  masterNode: Address
+): string {
+  return pluginId.concat('_').concat(masterNode.toHexString());
+}

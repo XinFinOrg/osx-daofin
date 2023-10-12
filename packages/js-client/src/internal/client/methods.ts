@@ -22,6 +22,7 @@ import { ProposalMetadata, findLog } from '@xinfin/osx-client-common';
 import {
   DaofinPlugin,
   DaofinPlugin__factory,
+  XDCValidator__factory,
 } from '@xinfin/osx-daofin-contracts-ethers';
 import {
   ProposalCreationStepValue,
@@ -265,7 +266,7 @@ export class DaofinClientMethods
       this.web3.getProvider()
     );
     const isJudiciaryMember = await daofin.isJudiciaryMember(member);
-    if (!isJudiciaryMember) return null;
+    if (isJudiciaryMember === undefined) return null;
     return isJudiciaryMember;
   };
   public async *updateOrJoinMasterNodeDelegatee(
@@ -304,5 +305,25 @@ export class DaofinClientMethods
     const isPeopleHouse = await daofin.isPeopleHouse(member);
     if (!isPeopleHouse) return null;
     return isPeopleHouse;
+  };
+  isXDCValidatorCadidate: (member: string) => Promise<boolean> = async (
+    member
+  ) => {
+    const signer = this.web3.getConnectedSigner();
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    const settings = await this.getGlobalSettings();
+    if (!settings) return null;
+
+    const validatorContract = XDCValidator__factory.connect(
+      await settings.xdcValidator,
+      this.web3.getProvider()
+    );
+    const isCandidate = await validatorContract.isCandidate(member);
+    if (isCandidate === undefined) return null;
+
+    return isCandidate;
   };
 }

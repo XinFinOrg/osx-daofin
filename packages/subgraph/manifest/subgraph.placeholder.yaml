@@ -68,5 +68,7 @@ templates:
           handler: handleProposalCreated
         - event: Deposited(address,uint256)
           handler: handleDeposited
+        - event: MasterNodeDelegateeUpdated(address,address)
+          handler: handleMasterNodeDelegateeUpdated
       file: ./src/plugin/plugin.ts
 

@@ -1,6 +1,7 @@
 import DaoData from '../../dao-initial-data.json';
 import {DaofinPluginSetupParams} from '../../plugin-settings';
 import {ADDRESS_ZERO} from '../../test/unit-testing/daofin-common';
+import {XDCValidator__factory} from '../../typechain';
 import {
   JudiciaryCommittee,
   MasterNodeCommittee,
@@ -38,12 +39,12 @@ export type DaofinPluginInstall = {
   electionPeriods: BigNumberish[];
 };
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const [deployer] = await hre.ethers.getSigners();
+  const [, deployer] = await hre.ethers.getSigners();
   const network = process.env.NETWORK_NAME
     ? process.env.NETWORK_NAME
     : hre.network.name;
 
-  const {METADATA} = DaofinPluginSetupParams;
+  const {METADATA, XDCMasterNodeTestingAddress} = DaofinPluginSetupParams;
 
   // @ts-ignore
   const daoFactoryAddress = activeContractsList[network].DAOFactory;
@@ -218,6 +219,28 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       log => pspInterface.parseLog(log).args[1]
     ),
   });
+  console.log(network);
+
+  if (network === 'apothem' || network === 'anvil') {
+    const validatorContract = XDCValidator__factory.connect(
+      XDCMasterNodeTestingAddress,
+      deployer
+    );
+
+    for (let i = 0; i < daoParams.dummyMasterNodeAddresses.length; i++) {
+      const address = daoParams.dummyMasterNodeAddresses[i];
+      console.log({address});
+
+      const isExist = await validatorContract.isCandidate(address);
+      console.log('XDCValidatorMock', `${address} : ${isExist}`);
+
+      if (isExist) return;
+      const tx = await validatorContract.addCandidate(address);
+      console.log('XDCValidatorMock', `${address} : ${tx.hash}`);
+
+      await tx.wait();
+    }
+  }
 };
 
 export default func;

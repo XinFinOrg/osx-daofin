@@ -29,5 +29,6 @@ packages/subgraph/tests/.latest.json
 packages/subgraph/tests/helpers/extended-schema.ts
 
 packages/contracts/deployments/
+packages/contracts/dao-initial-data.json
 
 .vscode

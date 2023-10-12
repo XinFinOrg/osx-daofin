@@ -42,6 +42,7 @@ export interface IDaofinClientMethods {
   ) => AsyncGenerator<UpdateOrJoinMasterNodeDelegateeStepValue>;
   isMasterNodeDelegatee: (delegatee: string) => Promise<boolean>;
   isPeopleHouse: (member: string) => Promise<boolean>;
+  isXDCValidatorCadidate: (member: string) => Promise<boolean>;
 }
 export interface IDaofinClientEncoding {}
 export interface IDaofinClientDecoding {
