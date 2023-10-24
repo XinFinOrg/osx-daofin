@@ -11,6 +11,9 @@ import {
   SubgraphProposalBase,
   UpdateOrJoinMasterNodeDelegateeStepValue,
   UpdateOrJoinMasterNodeDelegateeSteps,
+  VoteOption,
+  VoteStepValues,
+  VoteSteps,
 } from '../../types';
 import { getPluginInstallationId, toProposalListItem } from '../../utils';
 import { ProposalQuery, ProposalsQuery } from '../graphql-queries/proposals';
@@ -27,6 +30,7 @@ import {
 import {
   ProposalCreationStepValue,
   ProposalCreationSteps,
+  VoteValues,
 } from '@xinfin/osx-sdk-client';
 import { FailedDepositError } from '@xinfin/osx-sdk-common';
 import { resolveIpfsCid } from '@xinfin/osx-sdk-common';
@@ -192,7 +196,7 @@ export class DaofinClientMethods
       this.pluginAddress,
       this.web3.getProvider()
     );
-    return daofin.isVotedOnProposal(proposalId, voterAddress);
+    return daofin.isVotedOnProposal(voterAddress, proposalId);
   };
   voterToLockedAmount: (voterAddress: string) => Promise<BigNumberish> = async (
     voterAddress
@@ -326,4 +330,26 @@ export class DaofinClientMethods
 
     return isCandidate;
   };
+
+  public async *vote(
+    proposalId: string,
+    voteOption: VoteOption,
+    earlyExecution: boolean
+  ): AsyncGenerator<VoteStepValues, any, unknown> {
+    const tx = await this.getDaofinInstance().vote(
+      proposalId,
+      voteOption,
+      earlyExecution
+    );
+
+    yield {
+      key: VoteSteps.WAITING,
+      txHash: tx.hash,
+    };
+    await tx.wait();
+
+    yield {
+      key: VoteSteps.DONE,
+    };
+  }
 }

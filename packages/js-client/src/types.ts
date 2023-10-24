@@ -81,3 +81,22 @@ export type UpdateOrJoinMasterNodeDelegateeStepValue =
   | {
       key: UpdateOrJoinMasterNodeDelegateeSteps.DONE;
     };
+
+export enum VoteSteps {
+  WAITING = 'WAITING',
+  DONE = 'DONE',
+}
+export type VoteStepValues =
+  | {
+      key: VoteSteps.WAITING;
+      txHash: string;
+    }
+  | {
+      key: VoteSteps.DONE;
+    };
+export enum VoteOption {
+  NONE,
+  ABSTAIN,
+  YES,
+  NO,
+}

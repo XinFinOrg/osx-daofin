@@ -70,5 +70,7 @@ templates:
           handler: handleDeposited
         - event: MasterNodeDelegateeUpdated(address,address)
           handler: handleMasterNodeDelegateeUpdated
+        - event: VoteReceived(uint256,address,bytes32,uint8)
+          handler: handleVoteReceived
       file: ./src/plugin/plugin.ts
 

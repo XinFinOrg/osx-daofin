@@ -4,6 +4,8 @@ import {
   DepositStepValue,
   GlobalSettings,
   UpdateOrJoinMasterNodeDelegateeStepValue,
+  VoteOption,
+  VoteStepValues,
 } from '../types';
 import { BigNumberish } from '@ethersproject/bignumber';
 import { InterfaceParams } from '@xinfin/osx-client-common';
@@ -43,6 +45,11 @@ export interface IDaofinClientMethods {
   isMasterNodeDelegatee: (delegatee: string) => Promise<boolean>;
   isPeopleHouse: (member: string) => Promise<boolean>;
   isXDCValidatorCadidate: (member: string) => Promise<boolean>;
+  vote: (
+    proposalId: string,
+    voteOption: VoteOption,
+    earlyExecution: boolean
+  ) => AsyncGenerator<VoteStepValues>;
 }
 export interface IDaofinClientEncoding {}
 export interface IDaofinClientDecoding {

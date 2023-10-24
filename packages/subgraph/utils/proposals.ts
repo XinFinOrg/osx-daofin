@@ -42,3 +42,17 @@ export function getMasterNodeDelegateeId(
 ): string {
   return pluginId.concat('_').concat(masterNode.toHexString());
 }
+export function getPluginProposalVoteId(
+  daoId: string,
+  pluginId: string,
+  proposalNumber: BigInt,
+  voter: Address
+): string {
+  return daoId
+    .concat('_')
+    .concat(pluginId)
+    .concat('_')
+    .concat(bigIntToBytes32(proposalNumber))
+    .concat('_')
+    .concat(voter.toHexString());
+}

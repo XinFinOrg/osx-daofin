@@ -39,7 +39,7 @@ export type DaofinPluginInstall = {
   electionPeriods: BigNumberish[];
 };
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const [, deployer] = await hre.ethers.getSigners();
+  const [deployer] = await hre.ethers.getSigners();
   const network = process.env.NETWORK_NAME
     ? process.env.NETWORK_NAME
     : hre.network.name;

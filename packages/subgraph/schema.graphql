@@ -107,6 +107,7 @@ type PluginProposal implements IProposal @entity {
   executionDate: BigInt
   executionBlockNumber: BigInt
   executionTxHash: Bytes
+  votes: [PluginProposalVote!]! @derivedFrom(field: "proposal")
 }
 type PluginDeposit @entity(immutable: true) {
   id: ID! # dao + block number
@@ -140,4 +141,17 @@ type PluginMasterNodeDelegatee @entity {
   txHash: Bytes
   creationDate: BigInt
   updatedDate: BigInt
+}
+
+type PluginProposalVote @entity {
+  id: ID! # daoId + pluginId + proposalNumber + voter
+  voter: Bytes!
+  committee: Bytes!
+  pluginProposalId: BigInt!
+  option: Int!
+  plugin: Plugin!
+  proposal: PluginProposal!
+  txHash: Bytes
+  creationDate: BigInt
+  snapshotBlock: BigInt
 }

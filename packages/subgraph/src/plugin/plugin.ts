@@ -7,6 +7,7 @@ import {
   PluginJudiciary,
   Dao,
   PluginMasterNodeDelegatee,
+  PluginProposalVote,
 } from '../../generated/schema';
 import {
   ProposalCreated,
@@ -15,11 +16,13 @@ import {
   JudiciaryChanged,
   UpdateOrJoinMasterNodeDelegateeCall,
   MasterNodeDelegateeUpdated,
+  VoteReceived,
 } from '../../generated/templates/DaofinPlugin/DaofinPlugin';
 import {
   getDepositId,
   getJudiciaryId,
   getMasterNodeDelegateeId,
+  getPluginProposalVoteId,
   getProposalId,
 } from '../../utils/proposals';
 import {
@@ -179,4 +182,47 @@ export function handleMasterNodeDelegateeUpdated(
 
     entity.save();
   }
+}
+
+export function handleVoteReceived(event: VoteReceived): void {
+  let context = dataSource.context();
+
+  let daoId = context.getString('daoAddress');
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  let dao = Dao.load(daoId.toString());
+  if (!dao) return;
+
+  let plugin = Plugin.load(pluginInstallationId);
+  if (!plugin) return;
+
+  let pluginProposalId = event.params._proposalId;
+  let voter = event.params._voter;
+
+  let proposalId = getProposalId(event.address, pluginProposalId);
+
+  let pluginProposal = PluginProposal.load(proposalId);
+  if (!pluginProposal) return;
+
+  let pluginProposalVoteId = getPluginProposalVoteId(
+    daoId,
+    pluginInstallationId,
+    pluginProposalId,
+    voter
+  );
+  let entity = PluginProposalVote.load(pluginProposalVoteId);
+
+  if (entity) return;
+
+  entity = new PluginProposalVote(pluginProposalVoteId);
+  entity.voter = voter;
+  entity.plugin = pluginInstallationId;
+  entity.pluginProposalId = pluginProposalId;
+  entity.committee = event.params._committee;
+  entity.creationDate = event.block.timestamp;
+  entity.option = event.params._voteOption;
+  entity.txHash = event.transaction.hash;
+  entity.snapshotBlock = event.block.number;
+  entity.proposal = pluginProposal.pluginProposalId.toHexString();
+
+  entity.save();
 }
