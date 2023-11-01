@@ -1,13 +1,15 @@
 import {
   AddJudiciaryStepValue,
+  CommitteeVotingSettings,
   CreateProposalParams,
   DepositStepValue,
   GlobalSettings,
+  TallyDetails,
   UpdateOrJoinMasterNodeDelegateeStepValue,
   VoteOption,
   VoteStepValues,
 } from '../types';
-import { BigNumberish } from '@ethersproject/bignumber';
+import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
 import { InterfaceParams } from '@xinfin/osx-client-common';
 import { ProposalMetadata } from '@xinfin/osx-client-common';
 import { GasFeeEstimation } from '@xinfin/osx-client-common';
@@ -17,6 +19,7 @@ import {
   DaoDetails,
   ProposalCreationStepValue,
   ProposalQueryParams,
+  VotingSettings,
 } from '@xinfin/osx-sdk-client';
 
 export interface IDaofinClientMethods {
@@ -50,6 +53,18 @@ export interface IDaofinClientMethods {
     voteOption: VoteOption,
     earlyExecution: boolean
   ) => AsyncGenerator<VoteStepValues>;
+  getProposalTallyDetails(
+    proposalId: string,
+    committee: string
+  ): Promise<TallyDetails>;
+  getCommitteesToVotingSettings(
+    proposalId: string,
+    committee: string
+  ): Promise<CommitteeVotingSettings>;
+  getTotalNumberOfMembersByCommittee(committee: string): Promise<BigNumberish>;
+  getXDCTotalSupply(): Promise<BigNumberish>;
+  getTotalNumberOfJudiciary(): Promise<BigNumberish>;
+  getTotalNumberOfMN(): Promise<[BigNumberish, BigNumberish]>;
 }
 export interface IDaofinClientEncoding {}
 export interface IDaofinClientDecoding {

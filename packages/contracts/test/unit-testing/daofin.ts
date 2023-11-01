@@ -20,6 +20,7 @@ import {
   XdcValidator,
 } from './daofin-common';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
+import {RatioTest, RatioTest__factory} from '@xinfin/osx-ethers';
 import {ProposalCreationSteps} from '@xinfin/osx-sdk-client';
 import {expect} from 'chai';
 import {BigNumber} from 'ethers';
@@ -43,17 +44,24 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let Bob: SignerWithAddress;
   let Mike: SignerWithAddress;
   let John: SignerWithAddress;
+  let Beny: SignerWithAddress;
   let xdcValidatorMock: XDCValidator;
+  let ratio: RatioTest;
   before(async () => {
     signers = await ethers.getSigners();
     Alice = signers[0];
     Bob = signers[1];
     Mike = signers[2];
     John = signers[3];
+    Beny = signers[4];
 
     dao = await deployTestDao(Alice);
 
     DaofinPlugin = new DaofinPlugin__factory(Alice);
+
+    const RatioTest = new RatioTest__factory(Alice);
+    ratio = await RatioTest.deploy();
+
     xdcValidatorMock = await deployXDCValidator(Alice);
   });
 
@@ -1037,32 +1045,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
           );
       });
     });
-    //     ...createPropsalParams
-    //   );
-    //   await daofinPlugin.createProposal(...createPropsalParams);
-    //   await daofinPlugin
-    //     .connect(Bob)
-    //     .deposit({value: parseEther('10').toString()});
-
-    //   const committee = await daofinPlugin.findCommitteeName(Bob.address);
-
-    //   const tallyBefore = await daofinPlugin.getProposalTallyDetails(
-    //     proposalId,
-    //     committee
-    //   );
-
-    //   await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
-
-    //   const tally = await daofinPlugin.getProposalTallyDetails(
-    //     proposalId,
-    //     committee
-    //   );
-    //   expect(tally.yes.toString()).be.eq(
-    //     tallyBefore.yes.add(tally.yes).toString()
-    //   );
-    //   expect(tally.no.toNumber()).be.eq(0);
-    //   expect(tally.abstain.toNumber()).be.eq(0);
-    // });
   });
   describe('canExecute', async () => {
     before(async () => {
@@ -1153,6 +1135,258 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     it('should not add in the mapping', async () => {
       expect(daofinPlugin.connect(Bob.address).addJudiciaryMember(Mike.address))
         .to.reverted;
+    });
+  });
+  describe('MasterNode Minimum Participation', async () => {
+    beforeEach(async () => {
+      await daofinPlugin.initialize(...initializeParams);
+    });
+    before(async () => {
+      initializeParams = [
+        dao.address,
+        [parseEther('10'), parseEther('20'), parseEther('30')],
+        xdcValidatorMock.address,
+        [
+          {
+            name: MasterNodeCommittee,
+            minDuration: 1,
+            minParticipation: '1000',
+            minVotingPower: 1,
+            supportThreshold: 1,
+          },
+          {
+            name: JudiciaryCommittee,
+            minDuration: 1,
+            minParticipation: 1,
+            minVotingPower: 1,
+            supportThreshold: 1,
+          },
+          {
+            name: PeoplesHouseCommittee,
+            minDuration: 1,
+            minParticipation: 1,
+            minVotingPower: 1,
+            supportThreshold: 1,
+          },
+        ],
+        [Math.floor(Date.now() / 1000)],
+        [Bob.address],
+      ];
+    });
+    it('all votes must be greater or equal to minimum participations', async () => {
+      const proposalId = await daofinPlugin.callStatic.createProposal(
+        ...createPropsalParams
+      );
+      await daofinPlugin.createProposal(...createPropsalParams);
+
+      await xdcValidatorMock.addCandidate(Mike.address);
+
+      await daofinPlugin
+        .connect(Mike)
+        .updateOrJoinMasterNodeDelegatee(John.address);
+
+      await daofinPlugin.connect(Bob).addJudiciaryMember(Beny.address);
+
+      // Vote as MN Senate
+      await daofinPlugin.connect(John).vote(proposalId, '2', false);
+
+      // Vote as Judiciary
+
+      await daofinPlugin.connect(Bob).vote(proposalId, '3', false);
+
+      // Vote as Judiciary
+      await daofinPlugin.connect(Beny).vote(proposalId, '1', false);
+
+      const mnTally = await daofinPlugin.getProposalTallyDetails(
+        proposalId,
+        MasterNodeCommittee
+      );
+
+      const sumOfMnVotes = mnTally.yes.add(mnTally.no).add(mnTally.abstain);
+      const totalMNs = await xdcValidatorMock.getRealCandidates();
+      const masterNodeSettings =
+        await daofinPlugin.getCommitteesToVotingSettings(MasterNodeCommittee);
+
+      const minParticipations = await ratio.applyRatioCeiled(
+        totalMNs,
+        masterNodeSettings.minParticipation
+      );
+
+      expect(minParticipations.toNumber()).to.lessThanOrEqual(
+        sumOfMnVotes.toNumber()
+      );
+    });
+  });
+  describe('Judiciay Minimum Participation', async () => {
+    beforeEach(async () => {
+      await daofinPlugin.initialize(...initializeParams);
+    });
+    before(async () => {
+      initializeParams = [
+        dao.address,
+        [parseEther('10'), parseEther('20'), parseEther('30')],
+        xdcValidatorMock.address,
+        [
+          {
+            name: MasterNodeCommittee,
+            minDuration: 1,
+            minParticipation: '1000',
+            minVotingPower: 1,
+            supportThreshold: 1,
+          },
+          {
+            name: JudiciaryCommittee,
+            minDuration: 1,
+            minParticipation: '500000',
+            minVotingPower: 1,
+            supportThreshold: 1,
+          },
+          {
+            name: PeoplesHouseCommittee,
+            minDuration: 1,
+            minParticipation: 1,
+            minVotingPower: 1,
+            supportThreshold: 1,
+          },
+        ],
+        [Math.floor(Date.now() / 1000)],
+        [Bob.address],
+      ];
+    });
+    it('all votes must be greater or equal to minimum participations', async () => {
+      const proposalId = await daofinPlugin.callStatic.createProposal(
+        ...createPropsalParams
+      );
+      await daofinPlugin.createProposal(...createPropsalParams);
+
+      await xdcValidatorMock.addCandidate(Mike.address);
+
+      await daofinPlugin
+        .connect(Mike)
+        .updateOrJoinMasterNodeDelegatee(John.address);
+
+      await daofinPlugin.connect(Bob).addJudiciaryMember(Beny.address);
+
+      // Vote as MN Senate
+      await daofinPlugin.connect(John).vote(proposalId, '2', false);
+
+      // Vote as Judiciary
+
+      await daofinPlugin.connect(Bob).vote(proposalId, '3', false);
+
+      // Vote as Judiciary
+      await daofinPlugin.connect(Beny).vote(proposalId, '1', false);
+
+      const judiciariesTally = await daofinPlugin.getProposalTallyDetails(
+        proposalId,
+        JudiciaryCommittee
+      );
+
+      const sumOfMnVotes = judiciariesTally.yes
+        .add(judiciariesTally.no)
+        .add(judiciariesTally.abstain);
+      const totalJudiciaries = await daofinPlugin.getTotalNumberOfJudiciary();
+      const JudiciarySettings =
+        await daofinPlugin.getCommitteesToVotingSettings(JudiciaryCommittee);
+
+      const minParticipations = await ratio.applyRatioCeiled(
+        totalJudiciaries,
+        JudiciarySettings.minParticipation
+      );
+
+      expect(minParticipations.toNumber()).to.lessThanOrEqual(
+        sumOfMnVotes.toNumber()
+      );
+    });
+  });
+  describe('People Minimum Participation', async () => {
+    beforeEach(async () => {
+      await daofinPlugin.initialize(...initializeParams);
+    });
+    before(async () => {
+      xdcValidatorMock = await deployXDCValidator(Alice);
+      initializeParams = [
+        dao.address,
+        [parseEther('10'), parseEther('20'), parseEther('30')],
+        xdcValidatorMock.address,
+        [
+          {
+            name: MasterNodeCommittee,
+            minDuration: 1,
+            minParticipation: '1000',
+            minVotingPower: 1,
+            supportThreshold: 1,
+          },
+          {
+            name: JudiciaryCommittee,
+            minDuration: 1,
+            minParticipation: '500000',
+            minVotingPower: 1,
+            supportThreshold: 1,
+          },
+          {
+            name: PeoplesHouseCommittee,
+            minDuration: 1,
+            minParticipation: '100',
+            minVotingPower: 1,
+            supportThreshold: 1,
+          },
+        ],
+        [Math.floor(Date.now() / 1000)],
+        [Bob.address],
+      ];
+    });
+    it('all votes must be greater or equal to minimum participations', async () => {
+      const proposalId = await daofinPlugin.callStatic.createProposal(
+        ...createPropsalParams
+      );
+      await daofinPlugin.createProposal(...createPropsalParams);
+
+      await daofinPlugin.connect(Beny).deposit({
+        value: parseEther('10').toString(),
+      });
+
+      await daofinPlugin.connect(Mike).deposit({
+        value: parseEther('10').toString(),
+      });
+
+      await daofinPlugin.connect(John).deposit({
+        value: parseEther('10').toString(),
+      });
+
+      // Vote as People
+      await daofinPlugin.connect(John).vote(proposalId, '2', false);
+
+      // Vote as People
+      await daofinPlugin.connect(Mike).vote(proposalId, '2', false);
+
+      // Vote as Judiciary
+      await daofinPlugin.connect(Bob).vote(proposalId, '3', false);
+
+      // Vote as People
+      await daofinPlugin.connect(Beny).vote(proposalId, '1', false);
+
+      const peopleTally = await daofinPlugin.getProposalTallyDetails(
+        proposalId,
+        PeoplesHouseCommittee
+      );
+
+      const sumOfVotes = peopleTally.yes
+        .add(peopleTally.no)
+        .add(peopleTally.abstain);
+
+      const totalSupply = await daofinPlugin.getXDCTotalSupply();
+
+      const peopleSettings = await daofinPlugin.getCommitteesToVotingSettings(
+        PeoplesHouseCommittee
+      );
+
+      const minParticipations = await ratio.applyRatioCeiled(
+        totalSupply,
+        peopleSettings.minParticipation
+      );
+      const isGte = sumOfVotes.gte(minParticipations);
+      expect(isGte).to.be.true;
     });
   });
 });

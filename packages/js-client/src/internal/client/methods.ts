@@ -3,6 +3,7 @@ import { DaofinPluginCore } from '../../core';
 import {
   AddJudiciaryStepValue,
   AddJudiciarySteps,
+  CommitteeVotingSettings,
   CreateProposalParams,
   DaofinDetails,
   DepositStepValue,
@@ -31,6 +32,7 @@ import {
   ProposalCreationStepValue,
   ProposalCreationSteps,
   VoteValues,
+  VotingSettings,
 } from '@xinfin/osx-sdk-client';
 import { FailedDepositError } from '@xinfin/osx-sdk-common';
 import { resolveIpfsCid } from '@xinfin/osx-sdk-common';
@@ -67,9 +69,6 @@ export class DaofinClientMethods
     return {
       allowedAmounts: settings.allowedAmounts,
       xdcValidator: settings.xdcValidator,
-      totalNumberOfMasterNodes: 0,
-      totalNumberOfJudiciaries: settings.totalNumberOfJudiciaries,
-      totalNumberOfPeoplesHouse: settings.totalNumberOfPeoplesHouse,
     };
   }
   getDaofin(): Promise<DaofinDetails> {
@@ -351,5 +350,59 @@ export class DaofinClientMethods
     yield {
       key: VoteSteps.DONE,
     };
+  }
+  async getProposalTallyDetails(
+    proposalId: string,
+    committee: string
+  ): Promise<DaofinPlugin.TallyDatailsStruct> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+
+    return await daofin.getProposalTallyDetails(proposalId, committee);
+  }
+  async getCommitteesToVotingSettings(
+    proposalId: string,
+    committee: string
+  ): Promise<CommitteeVotingSettings> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+
+    return await daofin.getCommitteesToVotingSettings(committee);
+  }
+  async getTotalNumberOfMembersByCommittee(
+    committee: string
+  ): Promise<BigNumberish> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+
+    return await daofin.getTotalNumberOfMembersByCommittee(committee);
+  }
+  async getTotalNumberOfJudiciary(): Promise<BigNumberish> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+
+    return await daofin.getTotalNumberOfJudiciary();
+  }
+  async getTotalNumberOfMN(): Promise<[BigNumberish, BigNumberish]> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    return await daofin.getTotalNumberOfMN();
+  }
+  async getXDCTotalSupply(): Promise<BigNumberish> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    return await daofin.getXDCTotalSupply();
   }
 }
