@@ -17,7 +17,7 @@
       ]
     },
     "amounts": ["1", "2"],
-    "xdcValidatorAddress": "0xB0658F0295bbBf918eec097F5730AE0AD6D8CF8a",
+    "xdcValidatorAddress": "0xE92D669bF46a0387E1B2ba5F1b8AFBD3E156B14A",
     "judiciaryList": [
       "0x5bfC74606bdA5092cefdede1A89c14624F6bF198",
       "0x168c49bC0dcF7544318c4b094769E4d72a319944"

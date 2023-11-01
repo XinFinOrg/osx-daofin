@@ -1,7 +1,10 @@
 import { BigNumberish } from '@ethersproject/bignumber';
 import { DaoAction } from '@xinfin/osx-client-common';
 import { ContextState, OverriddenState } from '@xinfin/osx-client-common';
-import { DaofinPlugin } from '@xinfin/osx-daofin-contracts-ethers';
+import {
+  DaofinPlugin,
+  DaofinPlugin__factory,
+} from '@xinfin/osx-daofin-contracts-ethers';
 import { Context, ContextParams, DaoDetails } from '@xinfin/osx-sdk-client';
 
 export type DaofinContextState = {
@@ -100,3 +103,7 @@ export enum VoteOption {
   YES,
   NO,
 }
+
+export type TallyDetails = DaofinPlugin.TallyDatailsStruct;
+export type CommitteeVotingSettings =
+  DaofinPlugin.CommitteeVotingSettingsStruct;

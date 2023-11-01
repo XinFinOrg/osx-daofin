@@ -13,7 +13,7 @@ import {IXDCValidator} from "./interfaces/IXdcValidator.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {TransferHelper} from "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import {CheckpointsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/CheckpointsUpgradeable.sol";
-import {_applyRatioCeiled} from "@xinfin/osx/plugins/utils/Ratio.sol";
+import {_applyRatioCeiled, RATIO_BASE} from "@xinfin/osx/plugins/utils/Ratio.sol";
 import "hardhat/console.sol";
 
 contract DaofinPlugin is
@@ -39,9 +39,6 @@ contract DaofinPlugin is
     struct DaofinGlobalSettings {
         IXDCValidator xdcValidator;
         uint256[] allowedAmounts;
-        uint256 totalNumberOfMasterNodes;
-        uint256 totalNumberOfJudiciaries;
-        uint256 totalNumberOfPeoplesHouse;
         // ElectionPeriod[] _electionPeriods;
     }
     struct CommitteeVotingSettings {
@@ -179,6 +176,7 @@ contract DaofinPlugin is
         NOTE: holds a whitelist mapping
     */
     mapping(address => bool) public _judiciaryCommittee;
+    uint256 public _judiciaryCommitteeCount;
     /* 
         NOTE: holds a master node delegatee whitelist mapping
     */
@@ -204,7 +202,7 @@ contract DaofinPlugin is
 
         if (isMasterNodeDelegatee(_voter)) revert("1");
         if (isJudiciaryMember(_voter)) revert("2");
-        if (getGlobalSettings().xdcValidator.isCandidate(_voter)) revert("3");
+        if (getGlobalSettings().xdcValidator.isCandidate(_voter)) revert();
 
         _voterToLockedAmounts[_voter].amount += _value;
         _voterToLockedAmounts[_voter].blockNumber = snapshotBlockNumber;
@@ -524,6 +522,7 @@ contract DaofinPlugin is
         if (isJudiciaryMember(_member)) revert();
         if (_member == address(0)) revert();
         _judiciaryCommittee[_member] = true;
+        _judiciaryCommitteeCount++;
         emit JudiciaryChanged(_member, 0);
     }
 
@@ -558,7 +557,7 @@ contract DaofinPlugin is
         if (masterNode == address(0)) revert();
         if (delegatee_ == address(0)) revert();
 
-        if (masterNode == delegatee_) revert("1");
+        if (masterNode == delegatee_) revert();
 
         if (!getGlobalSettings().xdcValidator.isCandidate(masterNode)) revert();
 
@@ -570,9 +569,15 @@ contract DaofinPlugin is
     }
 
     function _updateMasterNodeDelegatee(address masterNode_, address delegatee_) private {
+        address _delegatee = _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
+        address _masterNode = _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
+
+        if (_delegatee == address(0) && _masterNode == address(0)) {
+            _masterNodeDelegatee.numberOfJointMasterNodes++;
+        }
+
         _masterNodeDelegatee.masterNodeToDelegatee[masterNode_] = delegatee_;
         _masterNodeDelegatee.delegateeToMasterNode[delegatee_] = masterNode_;
-        _masterNodeDelegatee.numberOfJointMasterNodes++;
     }
 
     function isMasterNodeDelegatee(address delegatee_) public view returns (bool isValid) {
@@ -638,8 +643,13 @@ contract DaofinPlugin is
 
             uint256 minParticipation = getCommitteesToVotingSettings(committee).minParticipation;
 
-            if (minParticipation == 0) return false;
-            isValid = totalVotes >= minParticipation;
+            if (minParticipation <= 0) return false;
+            if (totalVotes <= 0) return false;
+
+            isValid =
+                totalVotes >=
+                _applyRatioCeiled(getTotalNumberOfMembersByCommittee(committee), minParticipation);
+
             if (!isValid) return false;
         }
         return false;
@@ -656,11 +666,39 @@ contract DaofinPlugin is
 
             uint256 supportThreshold = getCommitteesToVotingSettings(committee).supportThreshold;
 
-            if (yes == 0) return false;
-            isValid = yes >= supportThreshold;
+            if (yes <= 0) return false;
+            if (supportThreshold <= 0) return false;
+            isValid =
+                yes >=
+                _applyRatioCeiled(getTotalNumberOfMembersByCommittee(committee), supportThreshold);
             if (!isValid) return false;
         }
         return false;
+    }
+
+    function getTotalNumberOfMN() public view returns (uint256, uint256) {
+        DaofinGlobalSettings memory _gs = getGlobalSettings();
+        return (_gs.xdcValidator.candidateCount(), _masterNodeDelegatee.numberOfJointMasterNodes);
+    }
+
+    function getXDCTotalSupply() public pure returns (uint256) {
+        return 37705012699 ether;
+    }
+
+    function getTotalNumberOfJudiciary() public view returns (uint256) {
+        return _judiciaryCommitteeCount;
+    }
+
+    function getTotalNumberOfMembersByCommittee(bytes32 committee_) public view returns (uint256) {
+        if (committee_ == MasterNodeCommittee) {
+            (uint256 xdcValidator, ) = getTotalNumberOfMN();
+            return xdcValidator;
+        } else if (committee_ == JudiciaryCommittee) {
+            return getTotalNumberOfJudiciary();
+        } else if (committee_ == PeoplesHouseCommittee) {
+            return getXDCTotalSupply();
+        }
+        return 0;
     }
 
     receive() external payable {}
