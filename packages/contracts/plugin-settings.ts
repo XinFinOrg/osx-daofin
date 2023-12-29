@@ -2,7 +2,7 @@ import daofinBuildMetadata from './src/build-metadata.json';
 import daofinReleaseMetadata from './src/release-metadata.json';
 
 export const DaofinPluginSetupParams: PluginSetupParams = {
-  PLUGIN_REPO_ENS_NAME: 'beny-plugin-repo-3012',
+  PLUGIN_REPO_ENS_NAME: 'beny-plugin-repo-3041',
   PLUGIN_CONTRACT_NAME: 'DaofinPlugin',
   PLUGIN_SETUP_CONTRACT_NAME: 'DaofinPluginSetup',
   VERSION: {

@@ -59,6 +59,8 @@ export function handleProposalCreated(event: ProposalCreated): void {
   entity.createdAt = event.block.timestamp;
   entity.creationBlockNumber = event.block.number;
   entity.snapshotBlock = event.block.number;
+  entity.creationTxHash = event.transaction.hash;
+
   entity.executed = false;
   for (let index = 0; index < event.params.actions.length; index++) {
     const action = event.params.actions[index];

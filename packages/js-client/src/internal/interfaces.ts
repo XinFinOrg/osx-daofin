@@ -71,9 +71,7 @@ export interface IDaofinClientDecoding {
   findInterface: (data: Uint8Array) => InterfaceParams | null;
 }
 export interface IDaofinClientEstimation {
-  createProposal: (
-    params: CreateMultisigProposalParams
-  ) => Promise<GasFeeEstimation>;
+  createProposal: (params: CreateProposalParams) => Promise<GasFeeEstimation>;
 }
 
 export interface IDaofinClient {

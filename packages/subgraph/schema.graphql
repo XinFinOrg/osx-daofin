@@ -103,6 +103,7 @@ type PluginProposal implements IProposal @entity {
   endDate: BigInt!
   creationBlockNumber: BigInt!
   snapshotBlock: BigInt!
+  creationTxHash: Bytes
   executed: Boolean!
   executionDate: BigInt
   executionBlockNumber: BigInt

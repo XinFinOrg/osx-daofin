@@ -45,9 +45,9 @@ export function handleInstallationPrepared(event: InstallationPrepared): void {
   // Check if the prepared plugin is our plugin.
   const isThisPlugin = pluginRepo === PLUGIN_REPO_ADDRESS;
 
-  // if (!isThisPlugin) {
-  //   return;
-  // }
+  if (!isThisPlugin) {
+    // return;
+  }
 
   //////////////////////////////////////////////////////////////
   // Index DAO

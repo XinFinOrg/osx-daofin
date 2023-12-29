@@ -13,8 +13,8 @@ import {IXDCValidator} from "./interfaces/IXdcValidator.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {TransferHelper} from "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import {CheckpointsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/CheckpointsUpgradeable.sol";
+import {CountersUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import {_applyRatioCeiled, RATIO_BASE} from "@xinfin/osx/plugins/utils/Ratio.sol";
-import "hardhat/console.sol";
 
 contract DaofinPlugin is
     Initializable,
@@ -23,6 +23,7 @@ contract DaofinPlugin is
     ProposalUpgradeable
 {
     using SafeCastUpgradeable for uint256;
+    using CountersUpgradeable for CountersUpgradeable.Counter;
     /// @notice The different voting modes available.
     /// @param Standard In standard mode, early execution is disabled.
     /// @param EarlyExecution In early execution mode, a proposal can be executed early before the end date if the vote outcome cannot mathematically change by more voters voting.
@@ -45,7 +46,7 @@ contract DaofinPlugin is
         bytes32 name;
         uint32 supportThreshold;
         uint32 minParticipation;
-        uint64 minDuration;
+        // uint64 minDuration;
         uint256 minVotingPower;
     }
 
@@ -76,29 +77,19 @@ contract DaofinPlugin is
     struct Proposal {
         bool executed;
         address proposer;
-        address[] voters;
+        uint256 proposalTypeId;
         uint256 allowFailureMap;
-        ProposalParameters parameters;
+        uint64 startDate;
+        uint64 endDate;
+        uint64 snapshotBlock;
+        address[] voters;
         IDAO.Action[] actions;
         mapping(address => VoteInfo) voterToInfo;
-        /* 
-            keccake256("<COMMITTEE_NAME>") => CommitteeVotingSettings
-            NOTE: Specifies some settings for each defined committees separately
-        */
-        // mapping(bytes32 => CommitteeVotingSettings) committeeToVotingSettings;
         /* 
             keccake256("<COMMITTEE_NAME>") => CommitteeVotingSettings
             NOTE: Holds tally numbers for each committee.
         */
         mapping(bytes32 => TallyDatails) committeeToTallyDatails;
-    }
-    struct ProposalParameters {
-        // GrantTiers _tier;
-        // uint32 supportThreshold;
-        uint64 startDate;
-        uint64 endDate;
-        uint64 snapshotBlock;
-        // uint256 minVotingPower;
     }
 
     struct ElectionPeriod {
@@ -134,6 +125,9 @@ contract DaofinPlugin is
     bytes32 public constant UPDATE_JUDICIARY_MAPPING_PERMISSION =
         keccak256("UPDATE_JUDICIARY_MAPPING_PERMISSION");
 
+    bytes32 public constant CREATE_PROPOSAL_TYPE_PERMISSION =
+        keccak256("CREATE_PROPOSAL_TYPE_PERMISSION");
+
     event JudiciaryChanged(address _member, uint256 _action); // action: 0 = Add, 1 = Remove
     event ElectionPeriodUpdated(uint64 _start, uint64 _end);
     event Deposited(address _depositer, uint256 _amount);
@@ -144,6 +138,7 @@ contract DaofinPlugin is
         VoteOption _voteOption
     );
     event MasterNodeDelegateeUpdated(address _masterNode, address _delegatee);
+    event ProposalTypeCreated(uint256 _proposalType);
 
     // A rate limiter on creation of proposal
     uint256 lastProposalBlockNumber;
@@ -188,6 +183,12 @@ contract DaofinPlugin is
     //
     ElectionPeriod[] private _electionPeriods;
 
+    /// @notice The incremental ID for proposal types.
+    CountersUpgradeable.Counter private proposalTypeCounter;
+
+    mapping(uint256 => mapping(bytes32 => CommitteeVotingSettings))
+        private _proposalTypesToCommiteesVotingSettings;
+
     function deposit() external payable returns (bool) {
         address _voter = _msgSender();
         uint256 _value = msg.value;
@@ -219,7 +220,8 @@ contract DaofinPlugin is
         IDAO _dao,
         uint256[] calldata allowedAmounts_,
         address xdcValidatorContract_,
-        CommitteeVotingSettings[] memory detailedSettings_,
+        CommitteeVotingSettings[] memory grantSettings_,
+        CommitteeVotingSettings[] memory generalSettings_,
         uint64[] memory electionPeriod_,
         address[] calldata judiciaries_
     ) external initializer {
@@ -244,16 +246,28 @@ contract DaofinPlugin is
 
             emit ElectionPeriodUpdated(_startDate, _endDate);
         }
-        // Assigning committees to the right variables
-        for (uint256 i = 0; i < detailedSettings_.length; i++) {
-            _committeesToVotingSettings[detailedSettings_[i].name] = detailedSettings_[i];
-            _committeesList.push(detailedSettings_[i].name);
-        }
-        for (uint256 i = 0; i < judiciaries_.length; i++) {
-            address judiciary = judiciaries_[i];
 
-            _addJudiciaryMember(judiciary);
-        }
+        // 0 = proposalType - Grants
+        _createProposalType(grantSettings_);
+
+        // 1 = proposalType - Creation of proposalType
+        _createProposalType(generalSettings_);
+
+        // 2 = proposalType - Changing voting settings
+        _createProposalType(generalSettings_);
+
+        // 3 = proposalType - ElectionPeriods
+        _createProposalType(generalSettings_);
+
+        // 4 = proposalType - Judiciary Replacement
+        _createProposalType(generalSettings_);
+
+        _addJudiciaryMember(judiciaries_);
+
+        _committeesList.push(MasterNodeCommittee);
+        _committeesList.push(PeoplesHouseCommittee);
+        _committeesList.push(JudiciaryCommittee);
+
         _settings.allowedAmounts = allowedAmounts_;
         _daofinGlobalSettings = _settings;
     }
@@ -289,24 +303,46 @@ contract DaofinPlugin is
         bytes calldata _metadata,
         IDAO.Action[] calldata _actions,
         uint256 _electionPeriodIndex,
-        uint256 _allowFailureMap
+        uint256 _proposalType,
+        uint256 _allowFailureMap,
+        VoteOption _voteOption
     ) external returns (uint256 _proposalId) {
         address proposer = _msgSender();
 
-        uint256 snapshotBlock = getBlockSnapshot();
-        require(snapshotBlock > lastProposalBlockNumber, "Daofin: try later.");
-        lastProposalBlockNumber = snapshotBlock;
-
-        // Validate proposal _startDate and _endDate
-        DaofinGlobalSettings memory _settings = getGlobalSettings();
+        require(proposalTypeCount() > _proposalType);
 
         uint64 _startDate = _electionPeriods[_electionPeriodIndex].startDate;
         uint64 _endDate = _electionPeriods[_electionPeriodIndex].endDate;
 
-        if (block.timestamp.toUint64() > _endDate) revert("Daofin: election is ended");
+        if (block.timestamp.toUint64() > _endDate) revert();
 
         _proposalId = _createProposal(
             proposer,
+            _metadata,
+            _startDate,
+            _endDate,
+            _actions,
+            _allowFailureMap
+        );
+        // Boom.. done.
+        bytes32 commitee = findCommitteeName(proposer);
+        if (commitee == bytes32(0)) revert("Daofin: invalid voter");
+
+        _updateVote(_proposalId, proposer, commitee, _voteOption);
+
+        emit VoteReceived(_proposalId, proposer, commitee, _voteOption);
+    }
+
+    function _createProposal(
+        address _creator,
+        bytes calldata _metadata,
+        uint64 _startDate,
+        uint64 _endDate,
+        IDAO.Action[] calldata _actions,
+        uint256 _allowFailureMap
+    ) internal override returns (uint256 _proposalId) {
+        _proposalId = super._createProposal(
+            _creator,
             _metadata,
             _startDate,
             _endDate,
@@ -317,22 +353,11 @@ contract DaofinPlugin is
         Proposal storage proposal_ = _proposals[_proposalId];
 
         // fill out the created proposalId with rest of needed fields
-        proposal_.proposer = proposer;
+        proposal_.proposer = _creator;
 
-        proposal_.parameters.startDate = _startDate;
-        proposal_.parameters.endDate = _endDate;
-        proposal_.parameters.snapshotBlock = snapshotBlock.toUint64();
-
-        // NOTE: (Needs to Remove) This state change is moved to other place
-        // bytes32[] memory committeesList = getCommitteesList();
-        // for (uint i = 0; i < committeesList.length; ) {
-        //     bytes32 committee = committeesList[i];
-        //     if (committee == bytes32(0)) revert("Daofin: wrong Committee");
-        //     CommitteeVotingSettings memory cvs = getCommitteesToVotingSettings(committee);
-        //     unchecked {
-        //         ++i;
-        //     }
-        // }
+        proposal_.startDate = _startDate;
+        proposal_.endDate = _endDate;
+        proposal_.snapshotBlock = getBlockSnapshot().toUint64();
 
         // Reduce costs
         if (_allowFailureMap != 0) {
@@ -345,7 +370,6 @@ contract DaofinPlugin is
                 ++i;
             }
         }
-        // Boom.. done.
     }
 
     function _updateVote(
@@ -389,7 +413,7 @@ contract DaofinPlugin is
         address voter = _msgSender();
 
         // retrieve proposal Object
-        (bool open, , address proposer, , , , ) = getProposal(_proposalId);
+        (bool open, , address proposer, , , , , ) = getProposal(_proposalId);
         // check if is not open, revert()
         if (!open) revert("Daofin: it is not open");
         if (proposer == voter) revert("Daofin: voter cannot vote on the proposal");
@@ -444,12 +468,12 @@ contract DaofinPlugin is
     }
 
     function _isProposalOpen(
-        ProposalParameters memory parameters,
+        uint64 startDate,
+        uint64 endDate,
         bool executed
     ) internal view virtual returns (bool) {
         uint64 currentTime = block.timestamp.toUint64();
-        // DaofinGlobalSettings memory _settings = getGlobalSettings();
-        return parameters.startDate <= currentTime && currentTime < parameters.endDate && !executed;
+        return startDate <= currentTime && currentTime < endDate && !executed;
     }
 
     function getProposal(
@@ -462,13 +486,15 @@ contract DaofinPlugin is
             bool executed,
             address proposer,
             address[] memory voters,
-            ProposalParameters memory parameters,
+            uint64 startDate,
+            uint64 endDate,
             IDAO.Action[] memory actions,
             uint256 allowFailureMap
         )
     {
         open = _isProposalOpen(
-            _proposals[_proposalId].parameters,
+            _proposals[_proposalId].startDate,
+            _proposals[_proposalId].endDate,
             _proposals[_proposalId].executed
         );
         return (
@@ -476,7 +502,8 @@ contract DaofinPlugin is
             _proposals[_proposalId].executed,
             _proposals[_proposalId].proposer,
             _proposals[_proposalId].voters,
-            _proposals[_proposalId].parameters,
+            _proposals[_proposalId].startDate,
+            _proposals[_proposalId].endDate,
             _proposals[_proposalId].actions,
             _proposals[_proposalId].allowFailureMap
         );
@@ -485,7 +512,7 @@ contract DaofinPlugin is
     function _canExecute(uint256 _proposalId) private view returns (bool isValid) {
         isValid = true;
 
-        (bool open, bool executed, , , , , ) = getProposal(_proposalId);
+        (bool open, bool executed, , , , , , ) = getProposal(_proposalId);
 
         // Verify that the proposal has not been executed or expired.
         if (!open && executed) {
@@ -513,17 +540,80 @@ contract DaofinPlugin is
         return _judiciaryCommittee[_member];
     }
 
-    function addJudiciaryMember(address _member) external {
-        if (!isJudiciaryMember(msg.sender)) revert();
-        _addJudiciaryMember(_member);
+    function _createProposalTypeId() internal returns (uint256 proposalTypeId) {
+        proposalTypeId = proposalCount();
+        proposalTypeCounter.increment();
+
+        // TODO: emit proper event
     }
 
-    function _addJudiciaryMember(address _member) private {
-        if (isJudiciaryMember(_member)) revert();
+    function createProposalType(
+        CommitteeVotingSettings[] memory _committeesVotingSettings
+    ) public auth(CREATE_PROPOSAL_TYPE_PERMISSION) returns (uint256 proposalTypeId) {
+        return _createProposalType(_committeesVotingSettings);
+    }
+
+    /* 
+
+ */
+    function _createProposalType(
+        CommitteeVotingSettings[] memory _committeesVotingSettings
+    ) private returns (uint256 proposalTypeId) {
+        proposalTypeId = _createProposalTypeId();
+
+        require(_committeesVotingSettings.length > 0, "invalid settings length");
+
+        // Assigning committees to the right variables
+        for (uint256 i = 0; i < _committeesVotingSettings.length; i++) {
+            bytes32 committeeName = _committeesVotingSettings[i].name;
+            if (committeeName != bytes32(0)) revert("invalid committee name");
+            if (
+                !(committeeName == MasterNodeCommittee ||
+                    committeeName == PeoplesHouseCommittee ||
+                    committeeName == JudiciaryCommittee)
+            ) {
+                revert("Invalid Committee name");
+            }
+            _proposalTypesToCommiteesVotingSettings[proposalTypeId][
+                _committeesVotingSettings[i].name
+            ] = _committeesVotingSettings[i];
+        }
+        emit ProposalTypeCreated(proposalTypeId);
+    }
+
+    function proposalTypeCount() public view returns (uint256) {
+        return proposalTypeCounter.current();
+    }
+
+    // TODO: Add auth(UPDATE_JUDICIARY_MAPPING_PERMISSION) modifier
+    function addJudiciaryMembers(
+        address[] memory _members
+    ) public auth(UPDATE_JUDICIARY_MAPPING_PERMISSION) {
+        _addJudiciaryMember(_members);
+    }
+
+    function _addJudiciaryMember(address[] memory _members) private {
+        for (uint256 i = 0; i < _members.length; i++) {
+            if (isJudiciaryMember(_members[i])) revert();
+            if (_members[i] == address(0)) revert();
+            _judiciaryCommittee[_members[i]] = true;
+            _judiciaryCommitteeCount++;
+            emit JudiciaryChanged(_members[i], 0);
+        }
+    }
+
+    function removeJudiciaryMember(
+        address _member
+    ) external auth(UPDATE_JUDICIARY_MAPPING_PERMISSION) {
+        _removeJudiciaryMember(_member);
+    }
+
+    function _removeJudiciaryMember(address _member) private {
         if (_member == address(0)) revert();
-        _judiciaryCommittee[_member] = true;
-        _judiciaryCommitteeCount++;
-        emit JudiciaryChanged(_member, 0);
+        if (!isJudiciaryMember(_member)) revert();
+        delete _judiciaryCommittee[_member];
+        _judiciaryCommitteeCount--;
+        emit JudiciaryChanged(_member, 1);
     }
 
     function updateElectionPeriod(
@@ -531,7 +621,7 @@ contract DaofinPlugin is
     ) public auth(UPDATE_ELECTION_PERIOD_PERMISSION) {
         for (uint256 i; i < _periods.length; i++) {
             uint64 _startDate = _periods[i].startDate;
-            uint64 _endDate = _periods[i].startDate + 1 weeks;
+            uint64 _endDate = _periods[i].startDate + _periods[i].endDate;
             _electionPeriods.push(ElectionPeriod(_startDate, _endDate));
             emit ElectionPeriodUpdated(_startDate, _endDate);
         }
@@ -570,7 +660,7 @@ contract DaofinPlugin is
 
     function _updateMasterNodeDelegatee(address masterNode_, address delegatee_) private {
         address _delegatee = _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
-        address _masterNode = _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
+        address _masterNode = _masterNodeDelegatee.delegateeToMasterNode[delegatee_];
 
         if (_delegatee == address(0) && _masterNode == address(0)) {
             _masterNodeDelegatee.numberOfJointMasterNodes++;
