@@ -28,7 +28,9 @@ export type CreateProposalParams = {
   metdata: string;
   actions: DaoAction[];
   electionIndex: BigNumberish;
+  proposalType: BigNumberish;
   allowFailureMap: BigNumberish;
+  voteOption: number;
 };
 
 export type SubgraphProposalBase = {

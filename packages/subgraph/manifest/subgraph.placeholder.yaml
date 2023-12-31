@@ -72,5 +72,9 @@ templates:
           handler: handleMasterNodeDelegateeUpdated
         - event: VoteReceived(uint256,address,bytes32,uint8)
           handler: handleVoteReceived
+        - event: ProposalTypeCreated(uint256,(bytes32,uint32,uint32,uint256)[])
+          handler: handleProposalTypeCreated
+        - event: ProposalIdToProposalTypeIdAttached(uint256,uint256)
+          handler: handleProposalIdToProposalTypeIdAttached
       file: ./src/plugin/plugin.ts
 

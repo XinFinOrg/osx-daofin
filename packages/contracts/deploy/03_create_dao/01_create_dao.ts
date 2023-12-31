@@ -66,29 +66,46 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const pluginInfo = getPluginInfo(network);
 
   const params = [
-    daoParams.amounts.map((amount: string) => parseEther(amount)),
+    parseEther(daoParams.amounts),
     daoParams.xdcValidatorAddress,
     [
       [
         MasterNodeCommittee,
         daoParams.masterNodeVotingSettings.supportThreshold,
         daoParams.masterNodeVotingSettings.minParticipation,
-        daoParams.masterNodeVotingSettings.minDuration,
         daoParams.masterNodeVotingSettings.minVotingPower,
-      ],
-      [
-        JudiciaryCommittee,
-        daoParams.judiciaryVotingSettings.supportThreshold,
-        daoParams.judiciaryVotingSettings.minParticipation,
-        daoParams.judiciaryVotingSettings.minDuration,
-        daoParams.judiciaryVotingSettings.minVotingPower,
       ],
       [
         PeoplesHouseCommittee,
         daoParams.peoplesHouseVotingSettings.supportThreshold,
         daoParams.peoplesHouseVotingSettings.minParticipation,
-        daoParams.peoplesHouseVotingSettings.minDuration,
         daoParams.peoplesHouseVotingSettings.minVotingPower,
+      ],
+      [
+        JudiciaryCommittee,
+        daoParams.judiciaryVotingSettings.supportThreshold,
+        daoParams.judiciaryVotingSettings.minParticipation,
+        daoParams.judiciaryVotingSettings.minVotingPower,
+      ],
+    ],
+    [
+      [
+        MasterNodeCommittee,
+        daoParams.masterNodeVotingSettings.supportThreshold,
+        daoParams.masterNodeVotingSettings.minParticipation,
+        daoParams.masterNodeVotingSettings.minVotingPower,
+      ],
+      [
+        PeoplesHouseCommittee,
+        daoParams.peoplesHouseVotingSettings.supportThreshold,
+        daoParams.peoplesHouseVotingSettings.minParticipation,
+        daoParams.peoplesHouseVotingSettings.minVotingPower,
+      ],
+      [
+        JudiciaryCommittee,
+        daoParams.judiciaryVotingSettings.supportThreshold,
+        daoParams.judiciaryVotingSettings.minParticipation,
+        daoParams.judiciaryVotingSettings.minVotingPower,
       ],
     ],
     [

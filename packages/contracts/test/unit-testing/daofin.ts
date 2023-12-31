@@ -74,19 +74,17 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       // const latestBlock = await ethers.provider.getBlock('latest');
       initializeParams = [
         dao.address,
-        [parseEther('10')],
+        parseEther('10'),
         XdcValidator,
         [
           {
             name: MasterNodeCommittee,
-            minDuration: 1,
             minParticipation: 1,
             minVotingPower: 1,
             supportThreshold: 1,
           },
           {
             name: JudiciaryCommittee,
-            minDuration: 1,
             minParticipation: 1,
             minVotingPower: 1,
             supportThreshold: 1,
@@ -99,6 +97,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
             supportThreshold: 1,
           },
         ],
+
         [Math.floor(Date.now() / 1000)],
         [ADDRESS_ONE],
       ];

@@ -67,7 +67,7 @@ export class DaofinClientMethods
     const settings = await daofin.getGlobalSettings();
     if (!settings) return null;
     return {
-      allowedAmounts: settings.allowedAmounts,
+      houseMinAmount: settings.houseMinAmount,
       xdcValidator: settings.xdcValidator,
     };
   }
@@ -80,13 +80,22 @@ export class DaofinClientMethods
   public async *createProposal(
     params: CreateProposalParams
   ): AsyncGenerator<ProposalCreationStepValue> {
-    const { actions, allowFailureMap, electionIndex, metdata } = params;
+    const {
+      actions,
+      allowFailureMap,
+      electionIndex,
+      metdata,
+      proposalType,
+      voteOption,
+    } = params;
 
     const tx = await this.getDaofinInstance().createProposal(
       toUtf8Bytes(params.metdata),
       actions,
       electionIndex,
-      allowFailureMap
+      proposalType,
+      allowFailureMap,
+      voteOption
     );
 
     yield {
@@ -212,7 +221,7 @@ export class DaofinClientMethods
   public async *deposit(
     depositAmount: BigNumberish
   ): AsyncGenerator<DepositStepValue> {
-    const tx = await this.getDaofinInstance().deposit({
+    const tx = await this.getDaofinInstance().joinHouse({
       value: depositAmount,
     });
 
@@ -241,7 +250,7 @@ export class DaofinClientMethods
   public async *addjudiciary(
     member: string
   ): AsyncGenerator<AddJudiciaryStepValue> {
-    const tx = await this.getDaofinInstance().addJudiciaryMember(member);
+    const tx = await this.getDaofinInstance().addJudiciaryMembers([...member]);
 
     yield {
       key: AddJudiciarySteps.ADDING,
@@ -370,8 +379,11 @@ export class DaofinClientMethods
       this.pluginAddress,
       this.web3.getProvider()
     );
-
-    return await daofin.getCommitteesToVotingSettings(committee);
+    const proposal = await daofin.getProposal(proposalId);
+    return await daofin.getCommitteesToVotingSettings(
+      proposal.proposalTypeId,
+      committee
+    );
   }
   async getTotalNumberOfMembersByCommittee(
     committee: string
