@@ -380,7 +380,7 @@ contract DaofinPlugin is
         TallyDatails memory td = getProposalTallyDetails(proposalId_, committee_);
 
         if (committee_ == PeoplesHouseCommittee) {
-            if (isAllowedAmount(voter_, 0)) {
+            if (_voterToLockedAmounts[voter_].amount >= getGlobalSettings().houseMinAmount) {
                 uint256 votingPower = _voterToLockedAmounts[voter_].amount;
                 if (voteOption_ == VoteOption.Yes) {
                     td.yes += votingPower;
@@ -445,10 +445,9 @@ contract DaofinPlugin is
         return _proposals[_proposalId].voterToInfo[_voter].voted;
     }
 
-    function isAllowedAmount(address voter, uint256 balance) private view returns (bool isValid) {
+    function isAllowedAmount(uint256 balance) private view returns (bool isValid) {
         if (balance == 0) isValid = false;
-        uint256 allowedAmount = getGlobalSettings().houseMinAmount;
-        uint256 _total = balance + _voterToLockedAmounts[voter].amount;
+        return getGlobalSettings().houseMinAmount >= balance;
     }
 
     function _isValidCommitteeName(bytes32 _committee) private view returns (bool) {
@@ -656,7 +655,9 @@ contract DaofinPlugin is
     function isPeopleHouse(address voter_) public view returns (bool isValid) {
         bool isBelongToOtherCommittee = isMasterNodeDelegatee(voter_) || isJudiciaryMember(voter_);
 
-        return !isBelongToOtherCommittee && isAllowedAmount(voter_, 0);
+        return
+            !isBelongToOtherCommittee &&
+            _voterToLockedAmounts[voter_].amount >= getGlobalSettings().houseMinAmount;
     }
 
     function findCommitteeName(address voter_) public view returns (bytes32) {
@@ -685,10 +686,6 @@ contract DaofinPlugin is
         address voter_
     ) public view returns (VoteInfo memory) {
         return _proposals[proposalId_].voterToInfo[voter_];
-    }
-
-    function isVoterDepositted(address voter_) public view returns (bool) {
-        return _voterToLockedAmounts[voter_].amount > 0;
     }
 
     function isMinParticipationReached(uint256 _proposalId) public view returns (bool) {

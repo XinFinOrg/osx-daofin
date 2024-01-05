@@ -1,6 +1,7 @@
 import { DaofinPluginCore } from '../../core';
-import { CreateProposalParams } from '../../types';
+import { CreateProposalParams, VoteOption } from '../../types';
 import { IDaofinClientEstimation } from '../interfaces';
+import { BigNumberish } from '@ethersproject/bignumber';
 import { toUtf8Bytes } from '@ethersproject/strings';
 import { ClientCore, GasFeeEstimation } from '@xinfin/osx-client-common';
 import {
@@ -46,4 +47,40 @@ export class DaofinClientEstimation
 
       return this.web3.getApproximateGasFee(estimation.toBigInt());
     };
+  updateOrJoinMasterNodeDelegatee: (
+    delegatee: string
+  ) => Promise<GasFeeEstimation> = async (delegatee) => {
+    const estimation =
+      await this.getDaofinInstance().estimateGas.updateOrJoinMasterNodeDelegatee(
+        delegatee
+      );
+
+    return this.web3.getApproximateGasFee(estimation.toBigInt());
+  };
+  joinHouse: (amount: BigNumberish) => Promise<GasFeeEstimation> = async (
+    amount
+  ) => {
+    const estimation = await this.getDaofinInstance().estimateGas.joinHouse({
+      value: amount,
+    });
+
+    return this.web3.getApproximateGasFee(estimation.toBigInt());
+  };
+  vote: (
+    proposalId: string,
+    voteOption: VoteOption,
+    earlyExecution: boolean
+  ) => Promise<GasFeeEstimation> = async (
+    proposalId,
+    voteOption,
+    earlyExecution
+  ) => {
+    const estimation = await this.getDaofinInstance().estimateGas.vote(
+      proposalId,
+      voteOption,
+      earlyExecution
+    );
+
+    return this.web3.getApproximateGasFee(estimation.toBigInt());
+  };
 }

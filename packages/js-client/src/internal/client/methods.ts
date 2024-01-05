@@ -6,8 +6,8 @@ import {
   CommitteeVotingSettings,
   CreateProposalParams,
   DaofinDetails,
-  DepositStepValue,
-  DepositSteps,
+  JoinHouseStepValue,
+  JoinHouseSteps,
   GlobalSettings,
   SubgraphProposalBase,
   UpdateOrJoinMasterNodeDelegateeStepValue,
@@ -187,14 +187,14 @@ export class DaofinClientMethods
       })
     );
   };
-  isUserDeposited: (voterAddress: string) => Promise<boolean> = async (
+  isPeopleHouse: (voterAddress: string) => Promise<boolean> = async (
     voterAddress
   ) => {
     const daofin = DaofinPlugin__factory.connect(
       this.pluginAddress,
       this.web3.getProvider()
     );
-    return daofin.isVoterDepositted(voterAddress);
+    return daofin.isPeopleHouse(voterAddress);
   };
   isVotedOnProposal: (
     proposalId: string,
@@ -218,15 +218,15 @@ export class DaofinClientMethods
     return isUserDeposited.amount;
   };
 
-  public async *deposit(
+  public async *joinHouse(
     depositAmount: BigNumberish
-  ): AsyncGenerator<DepositStepValue> {
+  ): AsyncGenerator<JoinHouseStepValue> {
     const tx = await this.getDaofinInstance().joinHouse({
       value: depositAmount,
     });
 
     yield {
-      key: DepositSteps.DEPOSITING,
+      key: JoinHouseSteps.DEPOSITING,
       txHash: tx.hash,
     };
     const receipt = await tx.wait();
@@ -241,7 +241,7 @@ export class DaofinClientMethods
     const amount = parsedLog.args['_amount'];
 
     yield {
-      key: DepositSteps.DONE,
+      key: JoinHouseSteps.DONE,
       txHash: tx.hash,
       depositer,
       amount,
@@ -306,17 +306,8 @@ export class DaofinClientMethods
       this.web3.getProvider()
     );
     const isMasterNodeDelegatee = await daofin.isMasterNodeDelegatee(delegatee);
-    if (!isMasterNodeDelegatee) return null;
+    if (isMasterNodeDelegatee === undefined) return null;
     return isMasterNodeDelegatee;
-  };
-  isPeopleHouse: (member: string) => Promise<boolean> = async (member) => {
-    const daofin = DaofinPlugin__factory.connect(
-      this.pluginAddress,
-      this.web3.getProvider()
-    );
-    const isPeopleHouse = await daofin.isPeopleHouse(member);
-    if (!isPeopleHouse) return null;
-    return isPeopleHouse;
   };
   isXDCValidatorCadidate: (member: string) => Promise<boolean> = async (
     member

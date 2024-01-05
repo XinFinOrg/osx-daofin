@@ -1,7 +1,7 @@
 {
   "name": "@xinfin/osx-daofin-sdk-client",
   "author": "Aragon Association",
-  "version": "1.0.72",
+  "version": "1.0.80",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/osx-daofin-sdk-client.esm.js",
@@ -74,7 +74,7 @@
     "@ethersproject/abi": "^5.7.0",
     "@ethersproject/keccak256": "^5.7.0",
     "@xinfin/osx-daofin-contracts": "0.10.4",
-    "@xinfin/osx-daofin-contracts-ethers": "0.10.5",
+    "@xinfin/osx-daofin-contracts-ethers": "^0.10.6",
     "@xinfin/osx-sdk-client": "^1.10.1",
     "graphql": "^16.6.0",
     "graphql-request": "4.3.0"

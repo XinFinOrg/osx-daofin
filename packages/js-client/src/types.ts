@@ -45,17 +45,17 @@ export type SubgraphProposalBase = {
   executed: boolean;
   potentiallyExecutable: boolean;
 };
-export enum DepositSteps {
+export enum JoinHouseSteps {
   DEPOSITING = 'DEPOSITING',
   DONE = 'DONE',
 }
-export type DepositStepValue =
+export type JoinHouseStepValue =
   | {
-      key: DepositSteps.DEPOSITING;
+      key: JoinHouseSteps.DEPOSITING;
       txHash: string;
     }
   | {
-      key: DepositSteps.DONE;
+      key: JoinHouseSteps.DONE;
       txHash: string;
       depositer: string;
       amount: string;
