@@ -2,7 +2,7 @@ import {
   AddJudiciaryStepValue,
   CommitteeVotingSettings,
   CreateProposalParams,
-  DepositStepValue,
+  JoinHouseStepValue,
   GlobalSettings,
   TallyDetails,
   UpdateOrJoinMasterNodeDelegateeStepValue,
@@ -33,13 +33,12 @@ export interface IDaofinClientMethods {
   pinMetadata: (params: ProposalMetadata) => Promise<string>;
   getProposal: (proposalId: string) => Promise<any | null>;
   getProposals: (params: any) => Promise<any[]>;
-  isUserDeposited: (voterAddress: string) => Promise<boolean>;
   voterToLockedAmount: (voterAddress: string) => Promise<BigNumberish>;
   isVotedOnProposal: (
     proposalId: string,
     voterAddress: string
   ) => Promise<boolean>;
-  deposit: (amount: BigNumberish) => AsyncGenerator<DepositStepValue>;
+  joinHouse: (amount: BigNumberish) => AsyncGenerator<JoinHouseStepValue>;
   addjudiciary: (member: string) => AsyncGenerator<AddJudiciaryStepValue>;
   isJudiciaryMember: (member: string) => Promise<boolean>;
   updateOrJoinMasterNodeDelegatee: (
@@ -71,8 +70,15 @@ export interface IDaofinClientDecoding {
   findInterface: (data: Uint8Array) => InterfaceParams | null;
 }
 export interface IDaofinClientEstimation {
-  createProposal: (
-    params: CreateMultisigProposalParams
+  createProposal: (params: CreateProposalParams) => Promise<GasFeeEstimation>;
+  updateOrJoinMasterNodeDelegatee: (
+    delegatee: string
+  ) => Promise<GasFeeEstimation>;
+  joinHouse: (amount: BigNumberish) => Promise<GasFeeEstimation>;
+  vote: (
+    proposalId: string,
+    voteOption: VoteOption,
+    earlyExecution: boolean
   ) => Promise<GasFeeEstimation>;
 }
 

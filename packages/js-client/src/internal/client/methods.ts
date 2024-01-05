@@ -6,8 +6,8 @@ import {
   CommitteeVotingSettings,
   CreateProposalParams,
   DaofinDetails,
-  DepositStepValue,
-  DepositSteps,
+  JoinHouseStepValue,
+  JoinHouseSteps,
   GlobalSettings,
   SubgraphProposalBase,
   UpdateOrJoinMasterNodeDelegateeStepValue,
@@ -67,7 +67,7 @@ export class DaofinClientMethods
     const settings = await daofin.getGlobalSettings();
     if (!settings) return null;
     return {
-      allowedAmounts: settings.allowedAmounts,
+      houseMinAmount: settings.houseMinAmount,
       xdcValidator: settings.xdcValidator,
     };
   }
@@ -80,13 +80,22 @@ export class DaofinClientMethods
   public async *createProposal(
     params: CreateProposalParams
   ): AsyncGenerator<ProposalCreationStepValue> {
-    const { actions, allowFailureMap, electionIndex, metdata } = params;
+    const {
+      actions,
+      allowFailureMap,
+      electionIndex,
+      metdata,
+      proposalType,
+      voteOption,
+    } = params;
 
     const tx = await this.getDaofinInstance().createProposal(
       toUtf8Bytes(params.metdata),
       actions,
       electionIndex,
-      allowFailureMap
+      proposalType,
+      allowFailureMap,
+      voteOption
     );
 
     yield {
@@ -178,14 +187,14 @@ export class DaofinClientMethods
       })
     );
   };
-  isUserDeposited: (voterAddress: string) => Promise<boolean> = async (
+  isPeopleHouse: (voterAddress: string) => Promise<boolean> = async (
     voterAddress
   ) => {
     const daofin = DaofinPlugin__factory.connect(
       this.pluginAddress,
       this.web3.getProvider()
     );
-    return daofin.isVoterDepositted(voterAddress);
+    return daofin.isPeopleHouse(voterAddress);
   };
   isVotedOnProposal: (
     proposalId: string,
@@ -209,15 +218,15 @@ export class DaofinClientMethods
     return isUserDeposited.amount;
   };
 
-  public async *deposit(
+  public async *joinHouse(
     depositAmount: BigNumberish
-  ): AsyncGenerator<DepositStepValue> {
-    const tx = await this.getDaofinInstance().deposit({
+  ): AsyncGenerator<JoinHouseStepValue> {
+    const tx = await this.getDaofinInstance().joinHouse({
       value: depositAmount,
     });
 
     yield {
-      key: DepositSteps.DEPOSITING,
+      key: JoinHouseSteps.DEPOSITING,
       txHash: tx.hash,
     };
     const receipt = await tx.wait();
@@ -232,7 +241,7 @@ export class DaofinClientMethods
     const amount = parsedLog.args['_amount'];
 
     yield {
-      key: DepositSteps.DONE,
+      key: JoinHouseSteps.DONE,
       txHash: tx.hash,
       depositer,
       amount,
@@ -241,7 +250,7 @@ export class DaofinClientMethods
   public async *addjudiciary(
     member: string
   ): AsyncGenerator<AddJudiciaryStepValue> {
-    const tx = await this.getDaofinInstance().addJudiciaryMember(member);
+    const tx = await this.getDaofinInstance().addJudiciaryMembers([...member]);
 
     yield {
       key: AddJudiciarySteps.ADDING,
@@ -297,17 +306,8 @@ export class DaofinClientMethods
       this.web3.getProvider()
     );
     const isMasterNodeDelegatee = await daofin.isMasterNodeDelegatee(delegatee);
-    if (!isMasterNodeDelegatee) return null;
+    if (isMasterNodeDelegatee === undefined) return null;
     return isMasterNodeDelegatee;
-  };
-  isPeopleHouse: (member: string) => Promise<boolean> = async (member) => {
-    const daofin = DaofinPlugin__factory.connect(
-      this.pluginAddress,
-      this.web3.getProvider()
-    );
-    const isPeopleHouse = await daofin.isPeopleHouse(member);
-    if (!isPeopleHouse) return null;
-    return isPeopleHouse;
   };
   isXDCValidatorCadidate: (member: string) => Promise<boolean> = async (
     member
@@ -370,8 +370,11 @@ export class DaofinClientMethods
       this.pluginAddress,
       this.web3.getProvider()
     );
-
-    return await daofin.getCommitteesToVotingSettings(committee);
+    const proposal = await daofin.getProposal(proposalId);
+    return await daofin.getCommitteesToVotingSettings(
+      proposal.proposalTypeId,
+      committee
+    );
   }
   async getTotalNumberOfMembersByCommittee(
     committee: string

@@ -23,14 +23,22 @@ contract DaofinPluginSetup is PluginSetup {
     ) external override returns (address plugin, PreparedSetupData memory preparedSetupData) {
         // Decode _data
         (
-            uint256[] memory allowedAmounts,
+            uint256 allowedAmount,
             address xdcValidator,
             DaofinPlugin.CommitteeVotingSettings[] memory committeeVotingSettings,
+            DaofinPlugin.CommitteeVotingSettings[] memory generalCommitteeVotingSettings,
             uint64[] memory electionPeriods,
             address[] memory judiciaries
         ) = abi.decode(
                 _data,
-                (uint256[], address, DaofinPlugin.CommitteeVotingSettings[], uint64[], address[])
+                (
+                    uint256,
+                    address,
+                    DaofinPlugin.CommitteeVotingSettings[],
+                    DaofinPlugin.CommitteeVotingSettings[],
+                    uint64[],
+                    address[]
+                )
             );
         // Deploy plugin proxy
         plugin = createERC1967Proxy(
@@ -38,16 +46,17 @@ contract DaofinPluginSetup is PluginSetup {
             abi.encodeWithSelector(
                 DaofinPlugin.initialize.selector,
                 _dao,
-                allowedAmounts,
+                allowedAmount,
                 xdcValidator,
                 committeeVotingSettings,
+                generalCommitteeVotingSettings,
                 electionPeriods,
                 judiciaries
             )
         );
         // Prepare and set the needed permissions
         PermissionLib.MultiTargetPermission[]
-            memory permissions = new PermissionLib.MultiTargetPermission[](6);
+            memory permissions = new PermissionLib.MultiTargetPermission[](7);
 
         permissions[0] = PermissionLib.MultiTargetPermission(
             PermissionLib.Operation.Grant,
@@ -96,6 +105,15 @@ contract DaofinPluginSetup is PluginSetup {
             plugin,
             PermissionLib.NO_CONDITION,
             DAO(payable(_dao)).EXECUTE_PERMISSION_ID()
+        );
+
+        // Grant `EXECUTE_PERMISSION` of the DAO to the plugin.
+        permissions[6] = PermissionLib.MultiTargetPermission(
+            PermissionLib.Operation.Grant,
+            _dao,
+            plugin,
+            PermissionLib.NO_CONDITION,
+            daofinPluginBase.CREATE_PROPOSAL_TYPE_PERMISSION()
         );
 
         preparedSetupData.permissions = permissions;

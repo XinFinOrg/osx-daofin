@@ -1,28 +1,28 @@
 {
   "apothem": {
-    "repo": "beny-plugin-repo-3012",
-    "address": "0xb53Ee6BeB9D64B8EA12556564c53d9DC5ce1531B",
+    "repo": "beny-plugin-repo-beta-1001",
+    "address": "0x74Fc8C0d04658940279c5F4f5F4758b9067f7e2E",
     "args": [],
-    "blockNumberOfDeployment": 56267634,
+    "blockNumberOfDeployment": 58359945,
     "releases": {
       "1": {
         "builds": {
           "1": {
             "setup": {
               "name": "DaofinPluginSetup",
-              "address": "0xDa4978fb5adfF99D579EF220cF69284762E91a0f",
+              "address": "0x62Dc248F0499F6e6A8985a284326DD250d4c99C0",
               "args": [],
-              "blockNumberOfDeployment": 56267639
+              "blockNumberOfDeployment": 58359947
             },
             "implementation": {
               "name": "DaofinPlugin",
-              "address": "0x0c439Fa171b5A34350E512dEA70a36D96e8Bc3D9",
+              "address": "0xbe8450a977B1d17bf518117E1B13C5E3143634a6",
               "args": [],
-              "blockNumberOfDeployment": 56267639
+              "blockNumberOfDeployment": 58359947
             },
             "helpers": [],
-            "buildMetadataURI": "ipfs://QmYkd6CnaDpeeHg2YnaHCFFRtdvBYw1p3R25skJKCgqZot",
-            "blockNumberOfPublication": 56267644
+            "buildMetadataURI": "ipfs://QmV3XAX9eniRBeipi2n4dA6EqT4JaUSaTE5ftnVnoYApiv",
+            "blockNumberOfPublication": 58359950
           }
         },
         "releaseMetadataURI": "ipfs://QmbJWAESqCsf4RFCqEY7jecCashj8usXiyDNfKtZCwwzGb"

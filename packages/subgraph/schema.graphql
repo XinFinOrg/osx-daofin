@@ -107,6 +107,8 @@ type PluginProposal implements IProposal @entity {
   executionDate: BigInt
   executionBlockNumber: BigInt
   executionTxHash: Bytes
+  creationTxHash: Bytes
+  proposalType: PluginProposalType
   votes: [PluginProposalVote!]! @derivedFrom(field: "proposal")
 }
 type PluginDeposit @entity(immutable: true) {
@@ -154,4 +156,20 @@ type PluginProposalVote @entity {
   txHash: Bytes
   creationDate: BigInt
   snapshotBlock: BigInt
+}
+type PluginProposalType @entity {
+  id: ID! # pluginProposalId
+  plugin: Plugin!
+  proposals: [PluginProposal!] @derivedFrom(field: "proposalType")
+  txHash: Bytes
+  creationDate: BigInt
+  settings: [CommitteeVotingSettings!]! @derivedFrom(field: "proposalType")
+}
+type CommitteeVotingSettings @entity {
+  id: ID!
+  name: Bytes!
+  supportThreshold: BigInt!
+  minParticipation: BigInt!
+  minVotingPower: BigInt!
+  proposalType: PluginProposalType!
 }

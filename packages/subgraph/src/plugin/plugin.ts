@@ -8,6 +8,8 @@ import {
   Dao,
   PluginMasterNodeDelegatee,
   PluginProposalVote,
+  PluginProposalType,
+  CommitteeVotingSettings,
 } from '../../generated/schema';
 import {
   ProposalCreated,
@@ -17,6 +19,8 @@ import {
   UpdateOrJoinMasterNodeDelegateeCall,
   MasterNodeDelegateeUpdated,
   VoteReceived,
+  ProposalTypeCreated,
+  ProposalIdToProposalTypeIdAttached,
 } from '../../generated/templates/DaofinPlugin/DaofinPlugin';
 import {
   getDepositId,
@@ -58,6 +62,7 @@ export function handleProposalCreated(event: ProposalCreated): void {
   entity.metadata = event.params.metadata.toString();
   entity.createdAt = event.block.timestamp;
   entity.creationBlockNumber = event.block.number;
+  entity.creationTxHash = event.transaction.hash;
   entity.snapshotBlock = event.block.number;
   entity.executed = false;
   for (let index = 0; index < event.params.actions.length; index++) {
@@ -74,11 +79,10 @@ export function handleProposalCreated(event: ProposalCreated): void {
     actionEntity.save();
   }
   let contract = DaofinPlugin.bind(pluginAddress);
-  const proposalObj = contract.try_getProposal(pluginProposalId);
+  const proposalObj = contract.try__proposals(pluginProposalId);
   if (proposalObj.reverted) return;
-  const proposalParams = proposalObj.value.getParameters();
-  entity.startDate = proposalParams.startDate;
-  entity.endDate = proposalParams.endDate;
+  entity.startDate = proposalObj.value.getStartDate();
+  entity.endDate = proposalObj.value.getEndDate();
   entity.save();
 }
 export function handleDeposited(event: Deposited): void {
@@ -224,5 +228,77 @@ export function handleVoteReceived(event: VoteReceived): void {
   entity.snapshotBlock = event.block.number;
   entity.proposal = pluginProposal.pluginProposalId.toHexString();
 
+  entity.save();
+}
+
+export function handleProposalTypeCreated(event: ProposalTypeCreated): void {
+  let context = dataSource.context();
+
+  let daoId = context.getString('daoAddress');
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  let dao = Dao.load(daoId.toString());
+  if (!dao) return;
+
+  let plugin = Plugin.load(pluginInstallationId);
+  if (!plugin) return;
+
+  let pluginProposalTypeId = event.params._proposalType.toHexString();
+
+  let pluginProposalType = PluginProposalType.load(pluginProposalTypeId);
+
+  if (pluginProposalType) return;
+
+  pluginProposalType = new PluginProposalType(pluginProposalTypeId);
+
+  pluginProposalType.txHash = event.transaction.hash;
+  pluginProposalType.creationDate = event.block.timestamp;
+  pluginProposalType.plugin = plugin.id;
+
+  pluginProposalType.save();
+
+  for (let i = 0; i < event.params._settings.length; i++) {
+    let item = event.params._settings[i];
+
+    let setting = new CommitteeVotingSettings(
+      pluginProposalTypeId.concat(item.name.toHexString())
+    );
+
+    setting.name = item.name;
+    setting.minParticipation = item.minParticipation;
+    setting.minVotingPower = item.minVotingPower;
+    setting.supportThreshold = item.supportThreshold;
+    setting.proposalType = pluginProposalTypeId;
+
+    setting.save();
+  }
+}
+
+export function handleProposalIdToProposalTypeIdAttached(
+  event: ProposalIdToProposalTypeIdAttached
+): void {
+  let context = dataSource.context();
+
+  let daoId = context.getString('daoAddress');
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  let dao = Dao.load(daoId.toString());
+  if (!dao) return;
+
+  let plugin = Plugin.load(pluginInstallationId);
+  if (!plugin) return;
+
+  let pluginProposalId = event.params._proposalId.toHexString();
+  let pluginProposalTypeId = event.params._proposalTypeId.toHexString();
+
+  let pluginAddress = event.address;
+
+  let proposalId = getProposalId(pluginAddress, event.params._proposalId);
+
+  let pluginProposalType = PluginProposalType.load(pluginProposalTypeId);
+  if (!pluginProposalType) return;
+
+  let entity = PluginProposal.load(proposalId);
+  if (!entity) return;
+
+  entity.proposalType = pluginProposalTypeId;
   entity.save();
 }
