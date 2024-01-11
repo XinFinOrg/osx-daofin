@@ -15,6 +15,8 @@ import {
   VoteOption,
   VoteStepValues,
   VoteSteps,
+  ExecuteSteps,
+  ExecuteStepValues,
 } from '../../types';
 import { getPluginInstallationId, toProposalListItem } from '../../utils';
 import { ProposalQuery, ProposalsQuery } from '../graphql-queries/proposals';
@@ -407,5 +409,40 @@ export class DaofinClientMethods
       this.web3.getProvider()
     );
     return await daofin.getXDCTotalSupply();
+  }
+  async canExecute(proposalId: string): Promise<boolean> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    return await daofin.canExecute(proposalId);
+  }
+  public async *execute(
+    proposalId: string
+  ): AsyncGenerator<ExecuteStepValues, any, unknown> {
+    const tx = await this.getDaofinInstance().execute(proposalId);
+    yield {
+      key: ExecuteSteps.WAITING,
+      txHash: tx.hash,
+    };
+    await tx.wait();
+
+    yield {
+      key: ExecuteSteps.DONE,
+    };
+  }
+  async isMinParticipationReached(proposalId: string): Promise<boolean> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    return await daofin.isMinParticipationReached(proposalId);
+  }
+  async isThresholdReached(proposalId: string): Promise<boolean> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    return await daofin.isThresholdReached(proposalId);
   }
 }

@@ -99,6 +99,19 @@ export type VoteStepValues =
   | {
       key: VoteSteps.DONE;
     };
+
+export enum ExecuteSteps {
+  WAITING = 'WAITING',
+  DONE = 'DONE',
+}
+export type ExecuteStepValues =
+  | {
+      key: ExecuteSteps.WAITING;
+      txHash: string;
+    }
+  | {
+      key: ExecuteSteps.DONE;
+    };
 export enum VoteOption {
   NONE,
   ABSTAIN,

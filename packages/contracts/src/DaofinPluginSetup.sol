@@ -101,21 +101,20 @@ contract DaofinPluginSetup is PluginSetup {
         // Grant `EXECUTE_PERMISSION` of the DAO to the plugin.
         permissions[5] = PermissionLib.MultiTargetPermission(
             PermissionLib.Operation.Grant,
-            _dao,
             plugin,
-            PermissionLib.NO_CONDITION,
-            DAO(payable(_dao)).EXECUTE_PERMISSION_ID()
-        );
-
-        // Grant `EXECUTE_PERMISSION` of the DAO to the plugin.
-        permissions[6] = PermissionLib.MultiTargetPermission(
-            PermissionLib.Operation.Grant,
             _dao,
-            plugin,
             PermissionLib.NO_CONDITION,
             daofinPluginBase.CREATE_PROPOSAL_TYPE_PERMISSION()
         );
 
+        // Grant `EXECUTE_PERMISSION` of the DAO to the plugin.
+        permissions[6] = PermissionLib.MultiTargetPermission({
+            operation: PermissionLib.Operation.Grant,
+            where: _dao,
+            who: plugin,
+            condition: PermissionLib.NO_CONDITION,
+            permissionId: DAO(payable(_dao)).EXECUTE_PERMISSION_ID()
+        });
         preparedSetupData.permissions = permissions;
     }
 
@@ -165,9 +164,16 @@ contract DaofinPluginSetup is PluginSetup {
             PermissionLib.NO_CONDITION,
             daofinPluginBase.UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION()
         );
+        permissions[5] = PermissionLib.MultiTargetPermission(
+            PermissionLib.Operation.Revoke,
+            plugin,
+            _dao,
+            PermissionLib.NO_CONDITION,
+            daofinPluginBase.CREATE_PROPOSAL_TYPE_PERMISSION()
+        );
 
         // Grant `EXECUTE_PERMISSION` of the DAO to the plugin.
-        permissions[5] = PermissionLib.MultiTargetPermission(
+        permissions[6] = PermissionLib.MultiTargetPermission(
             PermissionLib.Operation.Revoke,
             _dao,
             plugin,

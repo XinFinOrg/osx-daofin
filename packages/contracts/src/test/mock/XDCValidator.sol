@@ -26,4 +26,8 @@ contract XDCValidator {
     function getCandidates() external view returns (uint256) {
         return candidateCount;
     }
+
+    function reset() external {
+        candidateCount = 0;
+    }
 }

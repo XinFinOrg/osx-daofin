@@ -8,6 +8,8 @@ import {
   UpdateOrJoinMasterNodeDelegateeStepValue,
   VoteOption,
   VoteStepValues,
+  ExecuteSteps,
+  ExecuteStepValues,
 } from '../types';
 import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
 import { InterfaceParams } from '@xinfin/osx-client-common';
@@ -64,6 +66,10 @@ export interface IDaofinClientMethods {
   getXDCTotalSupply(): Promise<BigNumberish>;
   getTotalNumberOfJudiciary(): Promise<BigNumberish>;
   getTotalNumberOfMN(): Promise<[BigNumberish, BigNumberish]>;
+  canExecute(proposalId: string): Promise<boolean>;
+  execute: (proposalId: string) => AsyncGenerator<ExecuteStepValues>;
+  isMinParticipationReached: (proposalId: string) => Promise<boolean>;
+  isThresholdReached: (proposalId: string) => Promise<boolean>;
 }
 export interface IDaofinClientEncoding {}
 export interface IDaofinClientDecoding {
@@ -80,6 +86,7 @@ export interface IDaofinClientEstimation {
     voteOption: VoteOption,
     earlyExecution: boolean
   ) => Promise<GasFeeEstimation>;
+  execute: (proposalId: string) => Promise<GasFeeEstimation>;
 }
 
 export interface IDaofinClient {

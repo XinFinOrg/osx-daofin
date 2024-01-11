@@ -319,9 +319,10 @@ contract DaofinPlugin is
         );
         emit ProposalIdToProposalTypeIdAttached(_proposalId, _proposalType);
         // Boom.. done.
+
         bytes32 commitee = findCommitteeName(proposer);
-        if (commitee != bytes32(0)) {
-            // _updateVote(proposalTypeId, _proposalId, proposer, commitee, _voteOption);
+        if (commitee != bytes32(0) && _voteOption != VoteOption.None) {
+            _updateVote(_proposalType, _proposalId, proposer, commitee, _voteOption);
 
             emit VoteReceived(_proposalId, proposer, commitee, _voteOption);
         }
@@ -414,7 +415,7 @@ contract DaofinPlugin is
         (bool open, , address proposer, uint256 proposalTypeId) = getProposal(_proposalId);
         // check if is not open, revert()
         if (!open) revert("Daofin: it is not open");
-        if (proposer == voter) revert("Daofin: voter cannot vote on the proposal");
+        // if (proposer == voter) revert("Daofin: voter cannot vote on the proposal");
 
         // A voter must not vote on a proposal twice
         if (isVotedOnProposal(voter, _proposalId)) revert("Daofin: already voted");
@@ -422,12 +423,12 @@ contract DaofinPlugin is
         // Check if the supplied amount is in the range of specified values - 0 is place holder
         // if (!isAllowedAmount(voter, 0)) revert("Daofin: deposit first");
 
-        bytes32 commitee = findCommitteeName(voter);
-        if (commitee == bytes32(0)) revert("Daofin: invalid voter");
+        bytes32 committee = findCommitteeName(voter);
+        if (committee == bytes32(0)) revert("Daofin: invalid voter");
 
-        _updateVote(proposalTypeId, _proposalId, voter, commitee, _voteOption);
+        _updateVote(proposalTypeId, _proposalId, voter, committee, _voteOption);
 
-        emit VoteReceived(_proposalId, voter, commitee, _voteOption);
+        emit VoteReceived(_proposalId, voter, committee, _voteOption);
     }
 
     function execute(uint256 _proposalId) external {
@@ -484,8 +485,6 @@ contract DaofinPlugin is
     }
 
     function _canExecute(uint256 _proposalId) private view returns (bool isValid) {
-        isValid = true;
-
         (bool open, bool executed, , ) = getProposal(_proposalId);
 
         // Verify that the proposal has not been executed or expired.
@@ -495,7 +494,7 @@ contract DaofinPlugin is
         if (!isMinParticipationReached(_proposalId)) return false;
         if (!isThresholdReached(_proposalId)) return false;
 
-        return isValid;
+        return true;
     }
 
     function canExecute(uint256 _proposalId) external view returns (bool isValid) {
@@ -672,6 +671,7 @@ contract DaofinPlugin is
         if (isPeopleHouse(voter_)) {
             return PeoplesHouseCommittee;
         }
+        return bytes32(0);
     }
 
     function getProposalTallyDetails(
@@ -704,16 +704,13 @@ contract DaofinPlugin is
                 committee
             ).minParticipation;
 
-            if (minParticipation <= 0) return false;
-            if (totalVotes <= 0) return false;
-
             isValid =
                 totalVotes >=
                 _applyRatioCeiled(getTotalNumberOfMembersByCommittee(committee), minParticipation);
 
             if (!isValid) return false;
         }
-        return false;
+        return true;
     }
 
     function isThresholdReached(uint256 _proposalId) public view returns (bool) {
@@ -723,21 +720,19 @@ contract DaofinPlugin is
         bool isValid = false;
         for (uint i = 0; i < committees.length; i++) {
             bytes32 committee = committees[i];
-            uint256 yes = proposal_.committeeToTallyDatails[committee].yes;
+            uint256 totalVotes = proposal_.committeeToTallyDatails[committee].yes;
 
             uint256 supportThreshold = getCommitteesToVotingSettings(
                 proposal_.proposalTypeId,
                 committee
             ).supportThreshold;
 
-            if (yes <= 0) return false;
-            if (supportThreshold <= 0) return false;
             isValid =
-                yes >=
+                totalVotes >=
                 _applyRatioCeiled(getTotalNumberOfMembersByCommittee(committee), supportThreshold);
             if (!isValid) return false;
         }
-        return false;
+        return true;
     }
 
     function getTotalNumberOfMN() public view returns (uint256, uint256) {
