@@ -35,6 +35,7 @@ export class DaofinClientEstimation
       proposalType,
       voteOption,
     }) => {
+      const costs = await this.getProposalCosts();
       const estimation =
         await this.getDaofinInstance().estimateGas.createProposal(
           toUtf8Bytes(metdata),
@@ -42,7 +43,8 @@ export class DaofinClientEstimation
           electionIndex,
           proposalType,
           allowFailureMap,
-          voteOption
+          voteOption,
+          { value: costs }
         );
 
       return this.web3.getApproximateGasFee(estimation.toBigInt());
@@ -83,4 +85,20 @@ export class DaofinClientEstimation
 
     return this.web3.getApproximateGasFee(estimation.toBigInt());
   };
+  execute: (proposalId: string) => Promise<GasFeeEstimation> = async (
+    proposalId
+  ) => {
+    const estimation = await this.getDaofinInstance().estimateGas.execute(
+      proposalId
+    );
+
+    return this.web3.getApproximateGasFee(estimation.toBigInt());
+  };
+  async getProposalCosts(): Promise<BigNumberish> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    return await daofin.proposalCosts();
+  }
 }

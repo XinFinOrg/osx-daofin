@@ -19,7 +19,7 @@ type Dao @entity {
   actions: [Action!]! @derivedFrom(field: "dao")
   proposals: [IProposal!]! @derivedFrom(field: "dao")
   plugins: [Plugin!]! @derivedFrom(field: "dao")
-  deposits: [PluginDeposit!]! @derivedFrom(field: "dao")
+  deposits: [DaoDeposit!]! @derivedFrom(field: "dao")
 }
 
 # Plugins
@@ -45,8 +45,6 @@ type Plugin implements PluginInstallation @entity {
   "OSX related data"
   id: ID! # psp installationId
   dao: Dao!
-
-  "Set plugin specific related data below:"
   creationBlockNumber: BigInt!
   createdAt: BigInt
   xdcValidator: Bytes
@@ -55,6 +53,8 @@ type Plugin implements PluginInstallation @entity {
   judiciaries: [PluginJudiciary!]! @derivedFrom(field: "plugin")
   masterNodeDelegatees: [PluginMasterNodeDelegatee!]!
     @derivedFrom(field: "plugin")
+
+  electionPeriods: [PluginElectionPeriods!]! @derivedFrom(field: "plugin")
 }
 
 type PluginMember @entity {
@@ -108,6 +108,7 @@ type PluginProposal implements IProposal @entity {
   executionBlockNumber: BigInt
   executionTxHash: Bytes
   creationTxHash: Bytes
+  executedBy: Bytes
   proposalType: PluginProposalType
   votes: [PluginProposalVote!]! @derivedFrom(field: "proposal")
 }
@@ -117,6 +118,15 @@ type PluginDeposit @entity(immutable: true) {
   amount: BigInt!
   snapshotBlock: BigInt!
   plugin: Plugin!
+  dao: Dao!
+  txHash: Bytes
+  depositDate: BigInt
+}
+type DaoDeposit @entity(immutable: true) {
+  id: ID! # dao + block number
+  sender: Bytes!
+  amount: BigInt!
+  snapshotBlock: BigInt!
   dao: Dao!
   txHash: Bytes
   depositDate: BigInt
@@ -159,6 +169,7 @@ type PluginProposalVote @entity {
 }
 type PluginProposalType @entity {
   id: ID! # pluginProposalId
+  proposalTypeId: ID!
   plugin: Plugin!
   proposals: [PluginProposal!] @derivedFrom(field: "proposalType")
   txHash: Bytes
@@ -172,4 +183,11 @@ type CommitteeVotingSettings @entity {
   minParticipation: BigInt!
   minVotingPower: BigInt!
   proposalType: PluginProposalType!
+}
+
+type PluginElectionPeriods @entity {
+  id: ID!
+  startDate: BigInt!
+  endDate: BigInt!
+  plugin: Plugin!
 }

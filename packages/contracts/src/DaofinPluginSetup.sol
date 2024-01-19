@@ -28,7 +28,8 @@ contract DaofinPluginSetup is PluginSetup {
             DaofinPlugin.CommitteeVotingSettings[] memory committeeVotingSettings,
             DaofinPlugin.CommitteeVotingSettings[] memory generalCommitteeVotingSettings,
             uint64[] memory electionPeriods,
-            address[] memory judiciaries
+            address[] memory judiciaries,
+            uint256 proposalCosts
         ) = abi.decode(
                 _data,
                 (
@@ -37,7 +38,8 @@ contract DaofinPluginSetup is PluginSetup {
                     DaofinPlugin.CommitteeVotingSettings[],
                     DaofinPlugin.CommitteeVotingSettings[],
                     uint64[],
-                    address[]
+                    address[],
+                    uint256
                 )
             );
         // Deploy plugin proxy
@@ -51,12 +53,13 @@ contract DaofinPluginSetup is PluginSetup {
                 committeeVotingSettings,
                 generalCommitteeVotingSettings,
                 electionPeriods,
-                judiciaries
+                judiciaries,
+                proposalCosts
             )
         );
         // Prepare and set the needed permissions
         PermissionLib.MultiTargetPermission[]
-            memory permissions = new PermissionLib.MultiTargetPermission[](7);
+            memory permissions = new PermissionLib.MultiTargetPermission[](8);
 
         permissions[0] = PermissionLib.MultiTargetPermission(
             PermissionLib.Operation.Grant,
@@ -114,6 +117,14 @@ contract DaofinPluginSetup is PluginSetup {
             who: plugin,
             condition: PermissionLib.NO_CONDITION,
             permissionId: DAO(payable(_dao)).EXECUTE_PERMISSION_ID()
+        });
+
+        permissions[7] = PermissionLib.MultiTargetPermission({
+            operation: PermissionLib.Operation.Grant,
+            where: plugin,
+            who: _dao,
+            condition: PermissionLib.NO_CONDITION,
+            permissionId: daofinPluginBase.UPDATE_PROPOSAL_COSTS_PERMISSION()
         });
         preparedSetupData.permissions = permissions;
     }

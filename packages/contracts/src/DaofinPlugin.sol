@@ -118,6 +118,8 @@ contract DaofinPlugin is
 
     bytes32 public constant CREATE_PROPOSAL_TYPE_PERMISSION =
         keccak256("CREATE_PROPOSAL_TYPE_PERMISSION");
+    bytes32 public constant UPDATE_PROPOSAL_COSTS_PERMISSION =
+        keccak256("UPDATE_PROPOSAL_COSTS_PERMISSION");
 
     event JudiciaryChanged(address _member, uint256 _action); // action: 0 = Add, 1 = Remove
     event ElectionPeriodUpdated(uint64 _start, uint64 _end);
@@ -132,6 +134,8 @@ contract DaofinPlugin is
     event ProposalTypeCreated(uint256 _proposalType, CommitteeVotingSettings[] _settings);
     event HouseMinAmountUpdated(uint256 _newAmount);
     event ProposalIdToProposalTypeIdAttached(uint256 _proposalId, uint256 _proposalTypeId);
+    event ProposalCostsUpdated(uint256 _newValue);
+    event ProposalCostsReceived(uint256 _proposalId, address _proposer, uint256 _cost);
 
     // A rate limiter on creation of proposal
     uint256 lastProposalBlockNumber;
@@ -182,6 +186,8 @@ contract DaofinPlugin is
     mapping(uint256 => mapping(bytes32 => CommitteeVotingSettings))
         private _proposalTypesToCommiteesVotingSettings;
 
+    uint256 public proposalCosts;
+
     function joinHouse() external payable returns (bool) {
         address _member = _msgSender();
         uint256 _value = msg.value;
@@ -216,7 +222,8 @@ contract DaofinPlugin is
         CommitteeVotingSettings[] memory grantSettings_,
         CommitteeVotingSettings[] memory generalSettings_,
         uint64[] memory electionPeriod_,
-        address[] calldata judiciaries_
+        address[] calldata judiciaries_,
+        uint256 proposalCosts_
     ) external initializer {
         __PluginUUPSUpgradeable_init(_dao);
 
@@ -232,12 +239,15 @@ contract DaofinPlugin is
         // Assign and check Election period
         for (uint256 i; i < electionPeriod_.length; i++) {
             uint64 _startDate = electionPeriod_[i];
-            uint64 _endDate = electionPeriod_[i] + 1 weeks;
+            uint64 _endDate = electionPeriod_[i] + 2 weeks;
 
             _electionPeriods.push(ElectionPeriod(_startDate, _endDate));
 
             emit ElectionPeriodUpdated(_startDate, _endDate);
         }
+
+        proposalCosts = proposalCosts_;
+        emit ProposalCostsUpdated(proposalCosts_);
 
         _committeesList.push(MasterNodeCommittee);
         _committeesList.push(PeoplesHouseCommittee);
@@ -257,6 +267,9 @@ contract DaofinPlugin is
         // 4 = proposalType - Judiciary Replacement
         _createProposalType(generalSettings_);
 
+        // 5 = proposalCosts - Proposal Costs
+        _createProposalType(generalSettings_);
+
         _addJudiciaryMember(judiciaries_);
 
         _settings.houseMinAmount = allowedAmount_;
@@ -272,7 +285,9 @@ contract DaofinPlugin is
         virtual
         override(ERC165Upgradeable, PluginUUPSUpgradeable, ProposalUpgradeable)
         returns (bool)
-    {}
+    {
+        return true;
+    }
 
     function getGlobalSettings() public view returns (DaofinGlobalSettings memory) {
         return _daofinGlobalSettings;
@@ -299,16 +314,14 @@ contract DaofinPlugin is
         uint256 _proposalType,
         uint256 _allowFailureMap,
         VoteOption _voteOption
-    ) external returns (uint256 _proposalId) {
+    ) external payable returns (uint256 _proposalId) {
         address proposer = _msgSender();
+
+        _checkProposalCostsAndTransfer();
 
         require(proposalTypeCount() > _proposalType);
 
-        uint64 _startDate = _electionPeriods[_electionPeriodIndex].startDate;
-        uint64 _endDate = _electionPeriods[_electionPeriodIndex].endDate;
-
-        if (block.timestamp.toUint64() > _endDate) revert();
-
+        (uint64 _startDate, uint64 _endDate) = _checkElectionPeriod(_electionPeriodIndex);
         _proposalId = _createProposal(
             proposer,
             _metadata,
@@ -317,15 +330,11 @@ contract DaofinPlugin is
             _actions,
             _allowFailureMap
         );
+        _proposals[_proposalId].proposalTypeId = _proposalType;
         emit ProposalIdToProposalTypeIdAttached(_proposalId, _proposalType);
         // Boom.. done.
 
-        bytes32 commitee = findCommitteeName(proposer);
-        if (commitee != bytes32(0) && _voteOption != VoteOption.None) {
-            _updateVote(_proposalType, _proposalId, proposer, commitee, _voteOption);
-
-            emit VoteReceived(_proposalId, proposer, commitee, _voteOption);
-        }
+        _updateVote(_proposalType, _proposalId, proposer, _voteOption);
     }
 
     function _createProposal(
@@ -371,16 +380,21 @@ contract DaofinPlugin is
         uint256 proposalTypeId_,
         uint256 proposalId_,
         address voter_,
-        bytes32 committee_,
         VoteOption voteOption_
     ) private {
+        bytes32 committee = findCommitteeName(voter_);
+
+        if (voteOption_ == VoteOption.None) return;
+
+        if (committee == bytes32(0)) revert("Daofin: invalid voter");
+
         CommitteeVotingSettings memory cvs = getCommitteesToVotingSettings(
             proposalTypeId_,
-            committee_
+            committee
         );
-        TallyDatails memory td = getProposalTallyDetails(proposalId_, committee_);
+        TallyDatails memory td = getProposalTallyDetails(proposalId_, committee);
 
-        if (committee_ == PeoplesHouseCommittee) {
+        if (committee == PeoplesHouseCommittee) {
             if (_voterToLockedAmounts[voter_].amount >= getGlobalSettings().houseMinAmount) {
                 uint256 votingPower = _voterToLockedAmounts[voter_].amount;
                 if (voteOption_ == VoteOption.Yes) {
@@ -402,9 +416,11 @@ contract DaofinPlugin is
                 td.abstain += cvs.minVotingPower;
             }
         }
-        _proposals[proposalId_].committeeToTallyDatails[committee_] = td;
+        _proposals[proposalId_].committeeToTallyDatails[committee] = td;
         _proposals[proposalId_].voters.push(voter_);
         _proposals[proposalId_].voterToInfo[voter_] = VoteInfo(true, voteOption_);
+
+        emit VoteReceived(proposalId_, voter_, committee, voteOption_);
     }
 
     function vote(uint256 _proposalId, VoteOption _voteOption, bool _tryEarlyExecution) external {
@@ -412,7 +428,7 @@ contract DaofinPlugin is
         address voter = _msgSender();
 
         // retrieve proposal Object
-        (bool open, , address proposer, uint256 proposalTypeId) = getProposal(_proposalId);
+        (bool open, , , uint256 proposalTypeId) = getProposal(_proposalId);
         // check if is not open, revert()
         if (!open) revert("Daofin: it is not open");
         // if (proposer == voter) revert("Daofin: voter cannot vote on the proposal");
@@ -423,12 +439,7 @@ contract DaofinPlugin is
         // Check if the supplied amount is in the range of specified values - 0 is place holder
         // if (!isAllowedAmount(voter, 0)) revert("Daofin: deposit first");
 
-        bytes32 committee = findCommitteeName(voter);
-        if (committee == bytes32(0)) revert("Daofin: invalid voter");
-
-        _updateVote(proposalTypeId, _proposalId, voter, committee, _voteOption);
-
-        emit VoteReceived(_proposalId, voter, committee, _voteOption);
+        _updateVote(proposalTypeId, _proposalId, voter, _voteOption);
     }
 
     function execute(uint256 _proposalId) external {
@@ -446,8 +457,8 @@ contract DaofinPlugin is
         return _proposals[_proposalId].voterToInfo[_voter].voted;
     }
 
-    function isAllowedAmount(uint256 balance) private view returns (bool isValid) {
-        if (balance == 0) isValid = false;
+    function isAllowedAmount(uint256 balance) private view returns (bool) {
+        if (balance == 0) return false;
         return getGlobalSettings().houseMinAmount >= balance;
     }
 
@@ -638,6 +649,30 @@ contract DaofinPlugin is
 
         _masterNodeDelegatee.masterNodeToDelegatee[masterNode_] = delegatee_;
         _masterNodeDelegatee.delegateeToMasterNode[delegatee_] = masterNode_;
+    }
+
+    function updateProposalCosts(
+        uint256 _newValue
+    ) external auth(UPDATE_PROPOSAL_COSTS_PERMISSION) {
+        require(_newValue > 0);
+        proposalCosts = _newValue;
+        emit ProposalCostsUpdated(_newValue);
+    }
+
+    function _checkElectionPeriod(uint256 _electionIndex) private view returns (uint64, uint64) {
+        uint64 _startDate = _electionPeriods[_electionIndex].startDate;
+        uint64 _endDate = _electionPeriods[_electionIndex].endDate;
+
+        require(_startDate != 0 || _endDate != 0);
+        if (block.timestamp.toUint64() > _startDate) revert();
+
+        return (_startDate, _endDate);
+    }
+
+    function _checkProposalCostsAndTransfer() private {
+        require(msg.value == proposalCosts, "");
+        (bool success, ) = address(dao()).call{value: msg.value}("");
+        require(success, "Daofin: failed");
     }
 
     function isMasterNodeDelegatee(address delegatee_) public view returns (bool isValid) {

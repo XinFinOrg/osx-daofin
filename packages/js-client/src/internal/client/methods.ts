@@ -90,14 +90,17 @@ export class DaofinClientMethods
       proposalType,
       voteOption,
     } = params;
-
+    const costs = await this.getProposalCosts();
     const tx = await this.getDaofinInstance().createProposal(
       toUtf8Bytes(params.metdata),
       actions,
       electionIndex,
       proposalType,
       allowFailureMap,
-      voteOption
+      voteOption,
+      {
+        value: costs,
+      }
     );
 
     yield {
@@ -444,5 +447,26 @@ export class DaofinClientMethods
       this.web3.getProvider()
     );
     return await daofin.isThresholdReached(proposalId);
+  }
+  async isOpenProposal(proposalId: string): Promise<boolean> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    return (await daofin.getProposal(proposalId)).open;
+  }
+  async isExecutedProposal(proposalId: string): Promise<boolean> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    return (await daofin.getProposal(proposalId)).executed;
+  }
+  async getProposalCosts(): Promise<BigNumberish> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    return await daofin.proposalCosts();
   }
 }

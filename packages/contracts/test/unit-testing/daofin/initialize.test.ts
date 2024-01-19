@@ -118,8 +118,9 @@ describe(PLUGIN_CONTRACT_NAME, function () {
             parseEther('1')
           ),
         ],
-        [Math.floor(Date.now() / 1000)],
+        [Math.floor(new Date().getTime() / 1000) + 60 * 1000 * 60],
         [ADDRESS_ONE],
+        '10',
       ];
       await daofinPlugin.initialize(...initializeParams);
 
@@ -218,6 +219,14 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         expect(judiciary).be.not.eq(ADDRESS_ZERO);
         expect(judiciary).be.not.eq(XdcValidator);
       }
+    });
+    it('proposalCosts must be set and be correct', async () => {
+      await daofinPlugin.initialize(...initializeParams);
+      const proposalCosts = await daofinPlugin.proposalCosts();
+
+      expect(proposalCosts.toString()).not.be.greaterThan(
+        parseEther(initializeParams[7].toString())
+      );
     });
   });
 });

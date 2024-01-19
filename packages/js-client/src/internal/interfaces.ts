@@ -70,6 +70,9 @@ export interface IDaofinClientMethods {
   execute: (proposalId: string) => AsyncGenerator<ExecuteStepValues>;
   isMinParticipationReached: (proposalId: string) => Promise<boolean>;
   isThresholdReached: (proposalId: string) => Promise<boolean>;
+  getProposalCosts: () => Promise<BigNumberish>;
+  isOpenProposal(proposalId: string): Promise<boolean>;
+  isExecutedProposal(proposalId: string): Promise<boolean>;
 }
 export interface IDaofinClientEncoding {}
 export interface IDaofinClientDecoding {

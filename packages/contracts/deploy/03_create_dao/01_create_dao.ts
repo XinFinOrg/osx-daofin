@@ -109,10 +109,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       ],
     ],
     [
-      Math.floor(new Date().getTime() / 1000),
       Math.floor(new Date().getTime() / 1000) + 60 * 1000 * 60,
+      Math.floor(new Date().getTime() / 1000) + 60 * 1000 * 80,
     ],
     daoParams.judiciaryList,
+    parseEther('1'),
   ];
   const plugins = [
     {

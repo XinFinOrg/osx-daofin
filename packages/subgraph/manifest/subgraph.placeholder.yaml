@@ -47,6 +47,27 @@ dataSources:
 # templates
 templates:
   # Plugin (package)
+  - name: DaoTemplateV1_0_0
+    kind: ethereum/contract
+    network: {{network}}
+    source:
+      abi: DAO
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.6
+      language: wasm/assemblyscript
+      entities:
+        - Dao
+      abis:
+        - name: DAO
+          file: $PLUGIN_MODULE/artifacts/@xinfin/osx/core/dao/DAO.sol/DAO.json
+      eventHandlers:
+        - event: Deposited(indexed address,indexed address,uint256,string)
+          handler: handleDeposited
+
+      file: ./src/osx/DAO.ts
+        
+
   - name: DaofinPlugin
     kind: ethereum/contract
     network: {{network}}
@@ -76,5 +97,9 @@ templates:
           handler: handleProposalTypeCreated
         - event: ProposalIdToProposalTypeIdAttached(uint256,uint256)
           handler: handleProposalIdToProposalTypeIdAttached
+        - event: ProposalExecuted(indexed uint256)
+          handler: handleProposalExecuted
+        - event: ElectionPeriodUpdated(uint64,uint64)
+          handler: handleElectionPeriodUpdated
       file: ./src/plugin/plugin.ts
 

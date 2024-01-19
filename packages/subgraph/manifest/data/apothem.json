@@ -6,7 +6,14 @@
       {
         "name": "PluginSetupProcessor",
         "address": "0x308a1DC5020c4B5d992F5543a7236c465997fecB",
-        "startBlock": 58301000
+        "startBlock": 58801000
+      }
+    ],
+    "DAO": [
+      {
+        "name": "DAO",
+        "address": "0x308a1DC5020c4B5d992F5543a7236c465997fecB",
+        "startBlock": 58501000
       }
     ]
   }

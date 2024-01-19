@@ -105,8 +105,9 @@ describe(PLUGIN_CONTRACT_NAME, function () {
           parseEther('1')
         ),
       ],
-      [Math.floor(Date.now() / 1000)],
+      [Math.floor(new Date().getTime() / 1000) + 60 * 1000 * 60],
       [ADDRESS_ONE],
+      '10',
     ];
     await daofinPlugin.initialize(...initializeParams);
   });
@@ -115,18 +116,68 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       createPropsalParams = createProposalParams(
         '0x00',
         [],
-        '1',
+        '0',
         '0',
         '0',
         '0'
       );
+      createPropsalParams[6] = {value: initializeParams[7].toString()};
 
       expect(await daofinPlugin.proposalCount()).to.be.eq(0);
       expect(await daofinPlugin.proposalCount()).to.not.be.eq(1);
+
       expect(await daofinPlugin.createProposal(...createPropsalParams)).to.not
         .reverted;
+
       expect(await daofinPlugin.proposalCount()).to.not.be.eq(0);
       expect(await daofinPlugin.proposalCount()).to.be.eq(1);
+    });
+    it('proposalType must be set', async () => {
+      createPropsalParams = createProposalParams(
+        '0x00',
+        [],
+        '1',
+        '1',
+        '0',
+        '0'
+      );
+      createPropsalParams[6] = {value: initializeParams[7].toString()};
+
+      const proposalId = await daofinPlugin.callStatic.createProposal(
+        ...createPropsalParams
+      );
+      expect(await daofinPlugin.createProposal(...createPropsalParams)).to.not
+        .reverted;
+      expect(
+        (await daofinPlugin.getProposal(proposalId)).proposalTypeId
+      ).to.be.eq(1);
+      expect(await daofinPlugin.proposalCount()).to.be.eq(1);
+    });
+    it('proposalCost must be charged', async () => {
+      createPropsalParams = createProposalParams(
+        '0x00',
+        [],
+        '1',
+        '1',
+        '0',
+        '0'
+      );
+      createPropsalParams[6] = {value: initializeParams[7].toString()};
+
+      const daoBalanceBefore = await ethers.provider.getBalance(dao.address);
+
+      const proposalId = await daofinPlugin.callStatic.createProposal(
+        ...createPropsalParams
+      );
+      await daofinPlugin.createProposal(...createPropsalParams);
+      const daoBalanceAfter = await ethers.provider.getBalance(dao.address);
+
+      expect(daoBalanceAfter).to.be.greaterThan(daoBalanceBefore);
+
+      const isValid = daoBalanceAfter.eq(
+        daoBalanceBefore.add(initializeParams[7].toString())
+      );
+      expect(isValid).to.be.true;
     });
   });
 });

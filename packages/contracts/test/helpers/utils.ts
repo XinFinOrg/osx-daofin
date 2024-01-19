@@ -1,7 +1,9 @@
 import {DaofinPlugin, DaofinPlugin__factory} from '../../typechain';
 import {PromiseOrValue} from '../../typechain/common';
+import {HardhatEthersHelpers} from '@nomiclabs/hardhat-ethers/types';
 import {IDAO} from '@xinfin/osx-ethers';
 import {BigNumber, BigNumberish, BytesLike} from 'ethers';
+import {ethers} from 'hardhat';
 
 export function createCommitteeVotingSettings(
   name: PromiseOrValue<BytesLike>,
@@ -73,3 +75,11 @@ export function applyRatioCeiled(
 
   return result;
 }
+
+export const advanceTime = async (
+  lib: typeof ethers & HardhatEthersHelpers,
+  seconds: number
+) => {
+  await lib.provider.send('evm_increaseTime', [seconds]);
+  await lib.provider.send('evm_mine', []);
+};

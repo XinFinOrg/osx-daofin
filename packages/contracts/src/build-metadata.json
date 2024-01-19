@@ -77,6 +77,11 @@
           "internalType": "address[]",
           "name": "judiciaries_",
           "type": "address[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "proposalCosts",
+          "type": "uint256"
         }
       ],
       "prepareUpdate": "",
