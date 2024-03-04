@@ -1,4 +1,7 @@
-import {PLUGIN_SETUP_CONTRACT_NAME} from '../../plugin-settings';
+import {
+  DaofinPluginSetupParams,
+  PluginSetupParams,
+} from '../../plugin-settings';
 import {
   DaofinPlugin,
   DaofinPluginSetup,
@@ -19,7 +22,10 @@ let repoRegistry: PluginRepoRegistry;
 let pluginRepo: PluginRepo;
 
 async function deployAll() {
-  await deployments.fixture([PLUGIN_SETUP_CONTRACT_NAME, 'Deployment']);
+  await deployments.fixture([
+    DaofinPluginSetupParams.PLUGIN_CONTRACT_NAME,
+    'Deployment',
+  ]);
 }
 
 describe('PluginRepo Deployment', function () {

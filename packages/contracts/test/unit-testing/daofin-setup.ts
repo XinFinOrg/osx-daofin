@@ -6,12 +6,16 @@ import {
   DaofinPluginSetup,
   DaofinPluginSetup__factory,
   DaofinPlugin__factory,
+  XDCValidator,
 } from '../../typechain';
 import {deployTestDao} from '../helpers/test-dao';
+import {deployXDCValidator} from '../helpers/test-xdc-validator';
 import {getNamedTypesFromMetadata} from '../helpers/types';
+import {createCommitteeVotingSettings} from '../helpers/utils';
 import {
   ADDRESS_ONE,
   ADDRESS_ZERO,
+  CREATE_PROPOSAL_TYPE_PERMISSION_ID,
   EXECUTE_PERMISSION_ID,
   JudiciaryCommittee,
   MasterNodeCommittee,
@@ -37,43 +41,62 @@ describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
   let dao: DAO;
   let initializeParams: Parameters<DaofinPlugin['initialize']>;
   let initData: string;
+  let Alice: SignerWithAddress;
+  let xdcValidatorMock: XDCValidator;
 
   before(async () => {
     signers = await ethers.getSigners();
     dao = await deployTestDao(signers[0]);
-
-    DaofinPluginSetup = new DaofinPluginSetup__factory(signers[0]);
+    let Alice = signers[0];
+    DaofinPluginSetup = new DaofinPluginSetup__factory(Alice);
     daofinPluginSetup = await DaofinPluginSetup.deploy();
-
+    xdcValidatorMock = await deployXDCValidator(Alice);
     initializeParams = [
       dao.address,
-      [parseEther('10000')],
-      XdcValidator,
+      parseEther('1'),
+      xdcValidatorMock.address,
       [
-        {
-          name: MasterNodeCommittee,
-          minDuration: 1,
-          minParticipation: 1,
-          minVotingPower: 1,
-          supportThreshold: 1,
-        },
-        {
-          name: JudiciaryCommittee,
-          minDuration: 1,
-          minParticipation: 1,
-          minVotingPower: 1,
-          supportThreshold: 1,
-        },
-        {
-          name: PeoplesHouseCommittee,
-          minDuration: 1,
-          minParticipation: 1,
-          minVotingPower: 1,
-          supportThreshold: 1,
-        },
+        createCommitteeVotingSettings(
+          MasterNodeCommittee,
+          '0',
+          '0',
+          parseEther('1')
+        ),
+        createCommitteeVotingSettings(
+          PeoplesHouseCommittee,
+          '0',
+          '0',
+          parseEther('1')
+        ),
+        createCommitteeVotingSettings(
+          JudiciaryCommittee,
+          '0',
+          '0',
+          parseEther('1')
+        ),
       ],
-      [Date.now()],
-      [ADDRESS_ONE],
+      [
+        createCommitteeVotingSettings(
+          MasterNodeCommittee,
+          '0',
+          '0',
+          parseEther('1')
+        ),
+        createCommitteeVotingSettings(
+          PeoplesHouseCommittee,
+          '0',
+          '0',
+          parseEther('1')
+        ),
+        createCommitteeVotingSettings(
+          JudiciaryCommittee,
+          '0',
+          '0',
+          parseEther('1')
+        ),
+      ],
+      [Math.floor(Date.now() / 1000)],
+      [Alice.address],
     ];
   });
 
@@ -113,6 +136,7 @@ describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
         UPDATE_COMMITTEES_LIST_PERMISSION_ID,
         UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
         EXECUTE_PERMISSION_ID,
+        CREATE_PROPOSAL_TYPE_PERMISSION_ID,
       ];
       expect(preparedData.preparedSetupData.permissions.length).be.eq(
         allPermissions.length
@@ -171,6 +195,7 @@ describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
         UPDATE_ELECTION_PERIOD_PERMISSION_ID,
         UPDATE_COMMITTEES_LIST_PERMISSION_ID,
         UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
+        CREATE_PROPOSAL_TYPE_PERMISSION_ID,
         EXECUTE_PERMISSION_ID,
       ];
       expect(preparedData.preparedSetupData.permissions.length).be.eq(

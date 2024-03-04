@@ -21,6 +21,12 @@ export const UPDATE_JUDICIARY_MAPPING_PERMISSION_ID = ethers.utils.id(
   'UPDATE_JUDICIARY_MAPPING_PERMISSION'
 );
 export const EXECUTE_PERMISSION_ID = ethers.utils.id('EXECUTE_PERMISSION');
+export const CREATE_PROPOSAL_TYPE_PERMISSION_ID = ethers.utils.id(
+  'CREATE_PROPOSAL_TYPE_PERMISSION'
+);
+export const UPDATE_PROPOSAL_COSTS_PERMISSION_ID = ethers.utils.id(
+  'UPDATE_PROPOSAL_COSTS_PERMISSION'
+);
 
 export const MasterNodeCommittee = ethers.utils.id('MASTER_NODE_COMMITTEE');
 export const PeoplesHouseCommittee = ethers.utils.id('PEOPLES_HOUSE_COMMITTEE');

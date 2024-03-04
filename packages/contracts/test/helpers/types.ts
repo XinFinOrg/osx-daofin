@@ -40,6 +40,12 @@ export function getNamedTypesFromMetadata(inputs: any): string[] {
 
   return types;
 }
+export enum VoteOption {
+  None,
+  Abstain,
+  Yes,
+  No,
+}
 
 // describe('getNamedTypesFromMetadata', function () {
 //   it('simple', async () => {

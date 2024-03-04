@@ -1,7 +1,6 @@
-import DaoData from '../../dao-initial-data.json';
+import DaoData from '../../dao-initial-data-internal-demo.json';
 import {DaofinPluginSetupParams} from '../../plugin-settings';
 import {ADDRESS_ZERO} from '../../test/unit-testing/daofin-common';
-import {XDCValidator__factory} from '../../typechain';
 import {
   JudiciaryCommittee,
   MasterNodeCommittee,
@@ -19,12 +18,7 @@ import {
   activeContractsList,
 } from '@xinfin/osx-ethers';
 import {PermissionIds} from '@xinfin/osx-sdk-client';
-import {
-  bytesToHex,
-  decodeRatio,
-  encodeRatio,
-  hexToBytes,
-} from '@xinfin/osx-sdk-common';
+import {hexToBytes} from '@xinfin/osx-sdk-common';
 import {BigNumber, BigNumberish} from 'ethers';
 import {id, parseEther, toUtf8Bytes} from 'ethers/lib/utils';
 import {DeployFunction} from 'hardhat-deploy/types';
@@ -66,36 +60,89 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const pluginInfo = getPluginInfo(network);
 
   const params = [
-    daoParams.amounts.map((amount: string) => parseEther(amount)),
+    parseEther(daoParams.amounts),
     daoParams.xdcValidatorAddress,
     [
       [
         MasterNodeCommittee,
         daoParams.masterNodeVotingSettings.supportThreshold,
         daoParams.masterNodeVotingSettings.minParticipation,
-        daoParams.masterNodeVotingSettings.minDuration,
         daoParams.masterNodeVotingSettings.minVotingPower,
-      ],
-      [
-        JudiciaryCommittee,
-        daoParams.judiciaryVotingSettings.supportThreshold,
-        daoParams.judiciaryVotingSettings.minParticipation,
-        daoParams.judiciaryVotingSettings.minDuration,
-        daoParams.judiciaryVotingSettings.minVotingPower,
       ],
       [
         PeoplesHouseCommittee,
         daoParams.peoplesHouseVotingSettings.supportThreshold,
         daoParams.peoplesHouseVotingSettings.minParticipation,
-        daoParams.peoplesHouseVotingSettings.minDuration,
         daoParams.peoplesHouseVotingSettings.minVotingPower,
+      ],
+      [
+        JudiciaryCommittee,
+        daoParams.judiciaryVotingSettings.supportThreshold,
+        daoParams.judiciaryVotingSettings.minParticipation,
+        daoParams.judiciaryVotingSettings.minVotingPower,
       ],
     ],
     [
-      Math.floor(new Date().getTime() / 1000),
-      Math.floor(new Date().getTime() / 1000) + 60 * 1000 * 60,
+      [
+        MasterNodeCommittee,
+        daoParams.masterNodeVotingSettings.supportThreshold,
+        daoParams.masterNodeVotingSettings.minParticipation,
+        daoParams.masterNodeVotingSettings.minVotingPower,
+      ],
+      [
+        PeoplesHouseCommittee,
+        daoParams.peoplesHouseVotingSettings.supportThreshold,
+        daoParams.peoplesHouseVotingSettings.minParticipation,
+        daoParams.peoplesHouseVotingSettings.minVotingPower,
+      ],
+      [
+        JudiciaryCommittee,
+        daoParams.judiciaryVotingSettings.supportThreshold,
+        daoParams.judiciaryVotingSettings.minParticipation,
+        daoParams.judiciaryVotingSettings.minVotingPower,
+      ],
+    ],
+    [
+      // 1st
+      BigNumber.from(
+        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 3
+      ),
+      BigNumber.from(
+        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 5
+      ),
+      // 2nd
+      BigNumber.from(
+        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 5
+      ),
+      BigNumber.from(
+        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 7
+      ),
+      // 3rd
+      BigNumber.from(
+        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 7
+      ),
+      BigNumber.from(
+        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 9
+      ),
+      // 3rd
+      BigNumber.from(
+        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 9
+      ),
+      // 4th
+      BigNumber.from(
+        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 11
+      ),
+      // 5th
+      BigNumber.from(
+        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 13
+      ),
+      // 6th
+      BigNumber.from(
+        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 15
+      ),
     ],
     daoParams.judiciaryList,
+    parseEther('1'),
   ];
   const plugins = [
     {
@@ -172,7 +219,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const tx = await daoFactoryInstance.connect(deployer).createDao(
     {
-      subdomain: daoParams.daoEnsSubDomain,
+      subdomain: `${daoParams.daoEnsSubDomain}-${Date.now()}`,
       metadata: toUtf8Bytes(metadataUri),
       daoURI: '',
       trustedForwarder: ADDRESS_ZERO,
@@ -219,28 +266,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       log => pspInterface.parseLog(log).args[1]
     ),
   });
-  console.log(network);
-
-  if (network === 'apothem' || network === 'anvil') {
-    const validatorContract = XDCValidator__factory.connect(
-      XDCMasterNodeTestingAddress,
-      deployer
-    );
-
-    for (let i = 0; i < daoParams.dummyMasterNodeAddresses.length; i++) {
-      const address = daoParams.dummyMasterNodeAddresses[i];
-      console.log({address});
-
-      const isExist = await validatorContract.isCandidate(address);
-      console.log('XDCValidatorMock', `${address} : ${isExist}`);
-
-      if (isExist) return;
-      const tx = await validatorContract.addCandidate(address);
-      console.log('XDCValidatorMock', `${address} : ${tx.hash}`);
-
-      await tx.wait();
-    }
-  }
 };
 
 export default func;

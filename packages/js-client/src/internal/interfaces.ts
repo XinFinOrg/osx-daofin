@@ -2,12 +2,16 @@ import {
   AddJudiciaryStepValue,
   CommitteeVotingSettings,
   CreateProposalParams,
-  DepositStepValue,
+  JoinHouseStepValue,
   GlobalSettings,
   TallyDetails,
   UpdateOrJoinMasterNodeDelegateeStepValue,
   VoteOption,
   VoteStepValues,
+  ExecuteSteps,
+  ExecuteStepValues,
+  ResignStepValue,
+  ExecuteResignStepValue,
 } from '../types';
 import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
 import { InterfaceParams } from '@xinfin/osx-client-common';
@@ -33,13 +37,12 @@ export interface IDaofinClientMethods {
   pinMetadata: (params: ProposalMetadata) => Promise<string>;
   getProposal: (proposalId: string) => Promise<any | null>;
   getProposals: (params: any) => Promise<any[]>;
-  isUserDeposited: (voterAddress: string) => Promise<boolean>;
   voterToLockedAmount: (voterAddress: string) => Promise<BigNumberish>;
   isVotedOnProposal: (
     proposalId: string,
     voterAddress: string
   ) => Promise<boolean>;
-  deposit: (amount: BigNumberish) => AsyncGenerator<DepositStepValue>;
+  joinHouse: (amount: BigNumberish) => AsyncGenerator<JoinHouseStepValue>;
   addjudiciary: (member: string) => AsyncGenerator<AddJudiciaryStepValue>;
   isJudiciaryMember: (member: string) => Promise<boolean>;
   updateOrJoinMasterNodeDelegatee: (
@@ -65,15 +68,37 @@ export interface IDaofinClientMethods {
   getXDCTotalSupply(): Promise<BigNumberish>;
   getTotalNumberOfJudiciary(): Promise<BigNumberish>;
   getTotalNumberOfMN(): Promise<[BigNumberish, BigNumberish]>;
+  canExecute(proposalId: string): Promise<boolean>;
+  execute: (proposalId: string) => AsyncGenerator<ExecuteStepValues>;
+  isMinParticipationReached: (proposalId: string) => Promise<boolean>;
+  isThresholdReached: (proposalId: string) => Promise<boolean>;
+  getProposalCosts: () => Promise<BigNumberish>;
+  isOpenProposal(proposalId: string): Promise<boolean>;
+  isExecutedProposal(proposalId: string): Promise<boolean>;
+  getHouseDeposit(
+    member: string
+  ): Promise<ReturnType<DaofinPlugin['_voterToLockedAmounts']>>;
+  resignHouse: () => AsyncGenerator<ResignStepValue>;
+  executeResignHouse: () => AsyncGenerator<ExecuteResignStepValue>;
 }
 export interface IDaofinClientEncoding {}
 export interface IDaofinClientDecoding {
   findInterface: (data: Uint8Array) => InterfaceParams | null;
 }
 export interface IDaofinClientEstimation {
-  createProposal: (
-    params: CreateMultisigProposalParams
+  createProposal: (params: CreateProposalParams) => Promise<GasFeeEstimation>;
+  updateOrJoinMasterNodeDelegatee: (
+    delegatee: string
   ) => Promise<GasFeeEstimation>;
+  joinHouse: (amount: BigNumberish) => Promise<GasFeeEstimation>;
+  vote: (
+    proposalId: string,
+    voteOption: VoteOption,
+    earlyExecution: boolean
+  ) => Promise<GasFeeEstimation>;
+  execute: (proposalId: string) => Promise<GasFeeEstimation>;
+  resignHouse: () => Promise<GasFeeEstimation>;
+  executeResignHouse: () => Promise<GasFeeEstimation>;
 }
 
 export interface IDaofinClient {

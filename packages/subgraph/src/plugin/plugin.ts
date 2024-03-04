@@ -8,15 +8,22 @@ import {
   Dao,
   PluginMasterNodeDelegatee,
   PluginProposalVote,
+  PluginProposalType,
+  CommitteeVotingSettings,
+  PluginElectionPeriods,
 } from '../../generated/schema';
 import {
   ProposalCreated,
   Deposited,
   DaofinPlugin,
   JudiciaryChanged,
-  UpdateOrJoinMasterNodeDelegateeCall,
   MasterNodeDelegateeUpdated,
   VoteReceived,
+  ProposalTypeCreated,
+  ProposalIdToProposalTypeIdAttached,
+  ProposalExecuted,
+  ElectionPeriodUpdated,
+  UpdateElectionPeriodCall,
 } from '../../generated/templates/DaofinPlugin/DaofinPlugin';
 import {
   getDepositId,
@@ -25,13 +32,7 @@ import {
   getPluginProposalVoteId,
   getProposalId,
 } from '../../utils/proposals';
-import {
-  Address,
-  BigInt,
-  ByteArray,
-  Bytes,
-  dataSource,
-} from '@graphprotocol/graph-ts';
+import {Address, BigInt, dataSource} from '@graphprotocol/graph-ts';
 
 export function handleProposalCreated(event: ProposalCreated): void {
   let context = dataSource.context();
@@ -58,8 +59,12 @@ export function handleProposalCreated(event: ProposalCreated): void {
   entity.metadata = event.params.metadata.toString();
   entity.createdAt = event.block.timestamp;
   entity.creationBlockNumber = event.block.number;
+  entity.creationTxHash = event.transaction.hash;
   entity.snapshotBlock = event.block.number;
+  entity.startDate = event.params.startDate;
+  entity.endDate = event.params.endDate;
   entity.executed = false;
+
   for (let index = 0; index < event.params.actions.length; index++) {
     const action = event.params.actions[index];
     let actionId = getProposalId(pluginAddress, pluginProposalId)
@@ -73,12 +78,7 @@ export function handleProposalCreated(event: ProposalCreated): void {
     actionEntity.proposal = proposalId;
     actionEntity.save();
   }
-  let contract = DaofinPlugin.bind(pluginAddress);
-  const proposalObj = contract.try_getProposal(pluginProposalId);
-  if (proposalObj.reverted) return;
-  const proposalParams = proposalObj.value.getParameters();
-  entity.startDate = proposalParams.startDate;
-  entity.endDate = proposalParams.endDate;
+
   entity.save();
 }
 export function handleDeposited(event: Deposited): void {
@@ -225,4 +225,136 @@ export function handleVoteReceived(event: VoteReceived): void {
   entity.proposal = pluginProposal.pluginProposalId.toHexString();
 
   entity.save();
+}
+
+export function handleProposalTypeCreated(event: ProposalTypeCreated): void {
+  let context = dataSource.context();
+
+  let daoId = context.getString('daoAddress');
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  let dao = Dao.load(daoId.toString());
+  if (!dao) return;
+
+  let plugin = Plugin.load(pluginInstallationId);
+  if (!plugin) return;
+
+  let pluginProposalTypeId = event.params._proposalType.toHexString();
+  let subgraphId = pluginInstallationId.concat(pluginProposalTypeId);
+
+  let pluginProposalType = PluginProposalType.load(subgraphId);
+
+  if (pluginProposalType) return;
+
+  pluginProposalType = new PluginProposalType(subgraphId);
+
+  pluginProposalType.txHash = event.transaction.hash;
+  pluginProposalType.creationDate = event.block.timestamp;
+  pluginProposalType.plugin = plugin.id;
+  pluginProposalType.proposalTypeId = pluginProposalTypeId;
+
+  pluginProposalType.save();
+
+  for (let i = 0; i < event.params._settings.length; i++) {
+    let item = event.params._settings[i];
+
+    let setting = new CommitteeVotingSettings(
+      subgraphId.concat(item.name.toHexString())
+    );
+    setting.name = item.name;
+    setting.minParticipation = item.minParticipation;
+    setting.minVotingPower = item.minVotingPower;
+    setting.supportThreshold = item.supportThreshold;
+    setting.proposalType = subgraphId;
+
+    setting.save();
+  }
+}
+
+export function handleProposalIdToProposalTypeIdAttached(
+  event: ProposalIdToProposalTypeIdAttached
+): void {
+  let context = dataSource.context();
+
+  let daoId = context.getString('daoAddress');
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  let dao = Dao.load(daoId.toString());
+  if (!dao) return;
+
+  let plugin = Plugin.load(pluginInstallationId);
+  if (!plugin) return;
+
+  let pluginProposalId = event.params._proposalId.toHexString();
+  let pluginProposalTypeId = event.params._proposalTypeId.toHexString();
+
+  let pluginAddress = event.address;
+
+  let proposalId = getProposalId(pluginAddress, event.params._proposalId);
+
+  let pluginProposalType = PluginProposalType.load(
+    proposalId.concat(pluginProposalTypeId)
+  );
+  if (!pluginProposalType) return;
+
+  let entity = PluginProposal.load(proposalId);
+  if (!entity) return;
+
+  entity.proposalType = proposalId.concat(pluginProposalTypeId);
+  entity.save();
+}
+export function handleProposalExecuted(event: ProposalExecuted): void {
+  let context = dataSource.context();
+
+  let daoId = context.getString('daoAddress');
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  let dao = Dao.load(daoId.toString());
+  if (!dao) return;
+
+  let plugin = Plugin.load(pluginInstallationId);
+  if (!plugin) return;
+
+  let pluginProposalId = event.params.proposalId;
+
+  let proposalId = getProposalId(event.address, pluginProposalId);
+
+  let pluginProposal = PluginProposal.load(proposalId);
+  if (!pluginProposal) return;
+
+  pluginProposal.executed = true;
+  pluginProposal.executionDate = event.block.timestamp;
+  pluginProposal.executionBlockNumber = event.block.number;
+  pluginProposal.executionTxHash = event.transaction.hash;
+  pluginProposal.executedBy = event.transaction.from;
+
+  pluginProposal.save();
+}
+
+export function handleElectionPeriodUpdated(
+  event: ElectionPeriodUpdated
+): void {
+  let context = dataSource.context();
+
+  let daoId = context.getString('daoAddress');
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  let dao = Dao.load(daoId.toString());
+  if (!dao) return;
+
+  let plugin = Plugin.load(pluginInstallationId);
+  if (!plugin) return;
+
+  let startDate = event.params._start;
+  let endDate = event.params._end;
+  let pluginElectionPeriodId = pluginInstallationId
+    .concat(startDate.toString())
+    .concat(endDate.toString());
+
+  let electionSchema = PluginElectionPeriods.load(pluginElectionPeriodId);
+  if (electionSchema) return;
+
+  electionSchema = new PluginElectionPeriods(pluginElectionPeriodId);
+
+  electionSchema.startDate = startDate;
+  electionSchema.endDate = endDate;
+  electionSchema.plugin = plugin.id;
+
+  electionSchema.save();
 }

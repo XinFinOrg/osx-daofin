@@ -7,7 +7,7 @@ import {
   PluginSetupRefStruct,
   UninstallationAppliedEvent,
   InstallationAppliedEvent,
-} from '../../typechain/@aragon/osx/framework/plugin/setup/PluginSetupProcessor';
+} from '../../typechain/@xinfin/osx/framework/plugin/setup/PluginSetupProcessor';
 import {findEvent, hashHelpers} from '../../utils/helpers';
 import {expect} from 'chai';
 import {ContractTransaction} from 'ethers';

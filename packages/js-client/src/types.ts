@@ -28,7 +28,9 @@ export type CreateProposalParams = {
   metdata: string;
   actions: DaoAction[];
   electionIndex: BigNumberish;
+  proposalType: BigNumberish;
   allowFailureMap: BigNumberish;
+  voteOption: number;
 };
 
 export type SubgraphProposalBase = {
@@ -43,19 +45,48 @@ export type SubgraphProposalBase = {
   executed: boolean;
   potentiallyExecutable: boolean;
 };
-export enum DepositSteps {
+export enum JoinHouseSteps {
   DEPOSITING = 'DEPOSITING',
   DONE = 'DONE',
 }
-export type DepositStepValue =
+export type JoinHouseStepValue =
   | {
-      key: DepositSteps.DEPOSITING;
+      key: JoinHouseSteps.DEPOSITING;
       txHash: string;
     }
   | {
-      key: DepositSteps.DONE;
+      key: JoinHouseSteps.DONE;
       txHash: string;
       depositer: string;
+      amount: string;
+    };
+
+export enum ResignHouseSteps {
+  WAITING = 'WAITING',
+  DONE = 'DONE',
+}
+export type ResignStepValue =
+  | {
+      key: ResignHouseSteps.WAITING;
+      txHash: string;
+    }
+  | {
+      key: ResignHouseSteps.DONE;
+      txHash: string;
+      resigner: string;
+      amount: string;
+      cooldown: string;
+    };
+
+export type ExecuteResignStepValue =
+  | {
+      key: ResignHouseSteps.WAITING;
+      txHash: string;
+    }
+  | {
+      key: ResignHouseSteps.DONE;
+      txHash: string;
+      resigner: string;
       amount: string;
     };
 export enum AddJudiciarySteps {
@@ -96,6 +127,19 @@ export type VoteStepValues =
     }
   | {
       key: VoteSteps.DONE;
+    };
+
+export enum ExecuteSteps {
+  WAITING = 'WAITING',
+  DONE = 'DONE',
+}
+export type ExecuteStepValues =
+  | {
+      key: ExecuteSteps.WAITING;
+      txHash: string;
+    }
+  | {
+      key: ExecuteSteps.DONE;
     };
 export enum VoteOption {
   NONE,

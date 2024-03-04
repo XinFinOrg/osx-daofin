@@ -29,7 +29,7 @@ const apiUrls: NetworkNameMapping = {
   goerli: 'https://goerli.infura.io/v3/',
   polygon: 'https://polygon-testnet.public.blastapi.io',
   polygonMumbai: 'https://rpc.ankr.com/polygon_mumbai',
-  apothem: 'https://erpc.apothem.network',
+  apothem: 'https://earpc.apothem.network',
   xdc: 'https://erpc.xinfin.network',
 };
 
@@ -154,6 +154,12 @@ const config: HardhatUserConfig = {
   typechain: {
     outDir: 'typechain',
     target: 'ethers-v5',
+  },
+  contractSizer: {
+    alphaSort: true,
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
   },
 };
 
