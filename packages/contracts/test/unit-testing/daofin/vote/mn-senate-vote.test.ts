@@ -1,27 +1,26 @@
-import {DaofinPluginSetupParams} from '../../../plugin-settings';
+import {DaofinPluginSetupParams} from '../../../../plugin-settings';
 import {
   DaofinPlugin,
   DaofinPlugin__factory,
   MockTimestampOracle,
   MockTimestampOracle__factory,
   XDCValidator,
-} from '../../../typechain';
-import {deployWithProxy} from '../../../utils/helpers';
-import {deployTestDao} from '../../helpers/test-dao';
-import {deployXDCValidator} from '../../helpers/test-xdc-validator';
-import {VoteOption} from '../../helpers/types';
+} from '../../../../typechain';
+import {deployWithProxy} from '../../../../utils/helpers';
+import {deployTestDao} from '../../../helpers/test-dao';
+import {deployXDCValidator} from '../../../helpers/test-xdc-validator';
+import {VoteOption} from '../../../helpers/types';
 import {
   advanceTime,
   convertDaysToSeconds,
   createCommitteeVotingSettings,
   createProposalParams,
-} from '../../helpers/utils';
+} from '../../../helpers/utils';
 import {
-  EXECUTE_PERMISSION_ID,
   JudiciaryCommittee,
   MasterNodeCommittee,
   PeoplesHouseCommittee,
-} from '../daofin-common';
+} from '../../daofin-common';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
 import {DAO, RatioTest, RatioTest__factory} from '@xinfin/osx-ethers';
 import {expect} from 'chai';
@@ -72,7 +71,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   });
   let proposalId: BigNumber;
   let electionIndex = BigNumber.from('0');
-  describe('Execute', async () => {
+  describe('MasterNode: vote()', async () => {
     beforeEach(async () => {
       daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
       const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); //Math.floor(Date.now() / 1000);
@@ -86,14 +85,19 @@ describe(PLUGIN_CONTRACT_NAME, function () {
             MasterNodeCommittee,
             '100000',
             '100000',
-            '1'
+            parseEther('1')
           ),
-          createCommitteeVotingSettings(PeoplesHouseCommittee, '0', '0', '1'),
+          createCommitteeVotingSettings(
+            PeoplesHouseCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
           createCommitteeVotingSettings(
             JudiciaryCommittee,
             '100000',
             '100000',
-            '1'
+            parseEther('1')
           ),
         ],
         [
@@ -151,41 +155,52 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       );
       await proposalTx.wait();
 
+      await advanceTime(ethers, convertDaysToSeconds(2));
+
       await xdcValidatorMock.addCandidate(Mike.address);
       await daofinPlugin
         .connect(Mike)
         .updateOrJoinMasterNodeDelegatee(John.address);
-      await daofinPlugin.connect(Alice).joinHouse({value: parseEther('1')});
-
-      await advanceTime(ethers, convertDaysToSeconds(2));
     });
-    it('must not be able to execute', async () => {
-      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
-      await daofinPlugin.connect(John).vote(proposalId, '2', false);
-      await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
+    it('MasterNode: must record in tally details', async () => {
+      const voter = John;
 
-      // Not giving right permission
-      // await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
+      const voteOption: VoteOption = VoteOption.Yes;
+      const voteCommittee = MasterNodeCommittee;
 
-      await expect(daofinPlugin.execute(proposalId)).to.reverted;
+      const voteTx = await daofinPlugin
+        .connect(voter)
+        .vote(proposalId, voteOption, false);
+      await voteTx.wait();
+
+      const tallyAfter = await daofinPlugin.getProposalTallyDetails(
+        proposalId,
+        voteCommittee
+      );
+      expect(tallyAfter.no.toString()).not.be.eq(parseEther('1').toString());
+      expect(tallyAfter.no.toString()).be.eq(parseEther('0').toString());
+
+      expect(tallyAfter.yes.toString()).not.be.eq(parseEther('0').toString());
+      expect(tallyAfter.yes.toString()).be.eq(parseEther('1').toString());
     });
-    it('must execute', async () => {
-      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
-      await daofinPlugin.connect(John).vote(proposalId, '2', false);
-      await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
+    it('MasterNode: must record voter address', async () => {
+      const voter = John;
 
-      await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
+      const voteOption: VoteOption = VoteOption.Yes;
 
-      await expect(daofinPlugin.execute(proposalId)).to.not.reverted;
-    });
-    it('must not be able to execute(no enough votes)', async () => {
-      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
-      await daofinPlugin.connect(John).vote(proposalId, '1', false);
-      await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
+      const voteTx = await daofinPlugin
+        .connect(voter)
+        .vote(proposalId, voteOption, false);
+      await voteTx.wait();
 
-      await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
+      const info = await daofinPlugin.getProposalVoterToInfo(
+        proposalId,
+        voter.address
+      );
 
-      await expect(daofinPlugin.execute(proposalId)).to.reverted;
+      expect(info.voted).to.be.true;
+      expect(info.voted).not.be.false;
+      expect(info.option).be.eq(voteOption);
     });
   });
 });

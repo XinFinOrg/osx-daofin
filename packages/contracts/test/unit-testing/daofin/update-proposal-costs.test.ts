@@ -15,9 +15,12 @@ import {
 } from '../../helpers/utils';
 import {
   ADDRESS_ONE,
+  ADDRESS_ZERO,
   JudiciaryCommittee,
   MasterNodeCommittee,
   PeoplesHouseCommittee,
+  UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
+  UPDATE_PROPOSAL_COSTS_PERMISSION_ID,
   XdcValidator,
 } from '../daofin-common';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
@@ -50,6 +53,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     Mike = signers[2];
     John = signers[3];
     Beny = signers[4];
+
     dao = await deployTestDao(Alice);
 
     DaofinPlugin = new DaofinPlugin__factory(Alice);
@@ -58,6 +62,9 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     ratio = await RatioTest.deploy();
 
     xdcValidatorMock = await deployXDCValidator(Alice);
+
+    await xdcValidatorMock.addCandidate(Bob.address);
+    await xdcValidatorMock.addCandidate(Mike.address);
   });
 
   beforeEach(async () => {
@@ -67,7 +74,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     initializeParams = [
       dao.address,
       parseEther('1'),
-      XdcValidator,
+      xdcValidatorMock.address,
       [
         createCommitteeVotingSettings(
           MasterNodeCommittee,
@@ -111,96 +118,54 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
         BigNumber.from(now + 60 * 60 * 24 * 5),
-        BigNumber.from(now + 60 * 60 * 24 * 6),
-        BigNumber.from(now + 60 * 60 * 24 * 8),
       ],
-      [ADDRESS_ONE],
-      '1',
+      [Bob.address],
+      parseEther('1'),
     ];
     await daofinPlugin.initialize(...initializeParams);
   });
-  describe('create proposal', async () => {
-    it('must not revert', async () => {
-      createPropsalParams = createProposalParams(
-        '0x00',
-        [],
-        '0',
-        '0',
-        '0',
-        '0'
-      );
-      createPropsalParams[6] = {value: initializeParams[7].toString()};
+  describe('UpdateProposalCosts', async () => {
+    it('Only DAO is allowed to change', async () => {
+      const daoTreasury = Alice;
+      const proposalCost = await daofinPlugin.proposalCosts();
+      const newProposalCosts = parseEther('2');
 
-      expect(await daofinPlugin.proposalCount()).to.be.eq(BigNumber.from('0'));
-      expect(await daofinPlugin.proposalCount()).to.not.be.eq(
-        BigNumber.from('1')
+      await expect(
+        daofinPlugin.connect(daoTreasury).updateProposalCosts(newProposalCosts)
+      ).reverted;
+
+      await dao.grant(
+        daofinPlugin.address,
+        daoTreasury.address,
+        UPDATE_PROPOSAL_COSTS_PERMISSION_ID
       );
 
-      await daofinPlugin.createProposal('0x00', [], '0', '0', '0', '0', {
-        value: '1',
-      });
-
-      expect(await daofinPlugin.proposalCount()).to.not.be.eq(
-        BigNumber.from('0')
-      );
-      expect(await daofinPlugin.proposalCount()).to.be.eq(BigNumber.from('1'));
+      await expect(
+        daofinPlugin.connect(daoTreasury).updateProposalCosts(newProposalCosts)
+      ).not.reverted;
     });
-    it('proposalType must be set', async () => {
-      createPropsalParams = createProposalParams(
-        '0x00',
-        [],
-        '1',
-        '1',
-        '0',
-        '0'
-      );
-      createPropsalParams[6] = {value: initializeParams[7].toString()};
+    it('proposalCosts number must be set correctly', async () => {
+      const daoTreasury = Alice;
+      const proposalCost = await daofinPlugin.proposalCosts();
+      const newProposalCosts = parseEther('2');
 
-      const proposalId = await daofinPlugin.callStatic.createProposal(
-        ...createPropsalParams
-      );
-      await expect(daofinPlugin.createProposal(...createPropsalParams)).to.not
-        .reverted;
-      expect(
-        (await daofinPlugin.getProposal(proposalId)).proposalTypeId
-      ).to.be.eq('1');
-      expect(await daofinPlugin.proposalCount()).to.be.eq('1');
-    });
-    it('proposalCost must be charged', async () => {
-      createPropsalParams = createProposalParams(
-        '0x00',
-        [],
-        '1',
-        '1',
-        '0',
-        '0'
-      );
-      createPropsalParams[6] = {value: initializeParams[7].toString()};
+      await expect(
+        daofinPlugin.connect(daoTreasury).updateProposalCosts(newProposalCosts)
+      ).reverted;
 
-      const daoBalanceBefore = await ethers.provider.getBalance(dao.address);
-
-      await daofinPlugin.createProposal(...createPropsalParams);
-      const daoBalanceAfter = await ethers.provider.getBalance(dao.address);
-
-      expect(daoBalanceAfter).to.be.greaterThan(daoBalanceBefore);
-
-      const isValid = daoBalanceAfter.eq(
-        daoBalanceBefore.add(initializeParams[7].toString())
+      await dao.grant(
+        daofinPlugin.address,
+        daoTreasury.address,
+        UPDATE_PROPOSAL_COSTS_PERMISSION_ID
       );
-      expect(isValid).to.be.true;
-    });
-    it('must not be within voting session', async () => {
-      createPropsalParams = createProposalParams(
-        '0x00',
-        [],
-        '0',
-        '0',
-        '0',
-        '0'
-      );
-      await advanceTime(ethers, convertDaysToSeconds(4));
-      await expect(daofinPlugin.createProposal(...createPropsalParams)).to.be
-        .reverted;
+
+      await daofinPlugin
+        .connect(daoTreasury)
+        .updateProposalCosts(newProposalCosts);
+
+      const afterProposalCost = await daofinPlugin.proposalCosts();
+
+      expect(proposalCost).not.eq(afterProposalCost);
     });
   });
 });

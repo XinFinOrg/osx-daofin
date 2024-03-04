@@ -1,4 +1,4 @@
-import {METADATA} from '../../plugin-settings';
+import {DaofinPluginSetupParams} from '../../plugin-settings';
 import {
   DaofinPlugin,
   DaofinPluginSetup,
@@ -110,7 +110,8 @@ describe('PluginSetup Processing', function () {
         pluginSetupRef,
         ethers.utils.defaultAbiCoder.encode(
           getNamedTypesFromMetadata(
-            METADATA.build.pluginSetup.prepareInstallation.inputs
+            DaofinPluginSetupParams.METADATA.build.pluginSetup
+              .prepareInstallation.inputs
           ),
           []
         )
@@ -136,7 +137,8 @@ describe('PluginSetup Processing', function () {
         pluginSetupRef,
         ethers.utils.defaultAbiCoder.encode(
           getNamedTypesFromMetadata(
-            METADATA.build.pluginSetup.prepareUnInstallation.inputs
+            DaofinPluginSetupParams.METADATA.build.pluginSetup
+              .prepareUnInstallation.inputs
           ),
           []
         ),

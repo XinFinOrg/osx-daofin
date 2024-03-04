@@ -1,4 +1,8 @@
-import {DaofinPlugin, DaofinPlugin__factory} from '../../typechain';
+import {
+  DaofinPlugin,
+  DaofinPlugin__factory,
+  BaseDaofinPlugin,
+} from '../../typechain';
 import {PromiseOrValue} from '../../typechain/common';
 import {HardhatEthersHelpers} from '@nomiclabs/hardhat-ethers/types';
 import {IDAO} from '@xinfin/osx-ethers';
@@ -10,7 +14,7 @@ export function createCommitteeVotingSettings(
   qourum: BigNumberish,
   threshold: BigNumberish,
   votingPower: BigNumberish
-): DaofinPlugin.CommitteeVotingSettingsStruct {
+): BaseDaofinPlugin.CommitteeVotingSettingsStruct {
   return {
     name,
     minParticipation: qourum,
@@ -82,4 +86,7 @@ export const advanceTime = async (
 ) => {
   await lib.provider.send('evm_increaseTime', [seconds]);
   await lib.provider.send('evm_mine', []);
+};
+export const convertDaysToSeconds = (days: number, hours: number = 24) => {
+  return days * 60 * 60 * hours;
 };

@@ -10,6 +10,8 @@ import {
   VoteStepValues,
   ExecuteSteps,
   ExecuteStepValues,
+  ResignStepValue,
+  ExecuteResignStepValue,
 } from '../types';
 import { BigNumber, BigNumberish } from '@ethersproject/bignumber';
 import { InterfaceParams } from '@xinfin/osx-client-common';
@@ -73,6 +75,11 @@ export interface IDaofinClientMethods {
   getProposalCosts: () => Promise<BigNumberish>;
   isOpenProposal(proposalId: string): Promise<boolean>;
   isExecutedProposal(proposalId: string): Promise<boolean>;
+  getHouseDeposit(
+    member: string
+  ): Promise<ReturnType<DaofinPlugin['_voterToLockedAmounts']>>;
+  resignHouse: () => AsyncGenerator<ResignStepValue>;
+  executeResignHouse: () => AsyncGenerator<ExecuteResignStepValue>;
 }
 export interface IDaofinClientEncoding {}
 export interface IDaofinClientDecoding {
@@ -90,6 +97,8 @@ export interface IDaofinClientEstimation {
     earlyExecution: boolean
   ) => Promise<GasFeeEstimation>;
   execute: (proposalId: string) => Promise<GasFeeEstimation>;
+  resignHouse: () => Promise<GasFeeEstimation>;
+  executeResignHouse: () => Promise<GasFeeEstimation>;
 }
 
 export interface IDaofinClient {

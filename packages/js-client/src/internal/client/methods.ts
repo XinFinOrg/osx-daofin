@@ -17,6 +17,9 @@ import {
   VoteSteps,
   ExecuteSteps,
   ExecuteStepValues,
+  ResignStepValue,
+  ResignHouseSteps,
+  ExecuteResignStepValue,
 } from '../../types';
 import { getPluginInstallationId, toProposalListItem } from '../../utils';
 import { ProposalQuery, ProposalsQuery } from '../graphql-queries/proposals';
@@ -468,5 +471,66 @@ export class DaofinClientMethods
       this.web3.getProvider()
     );
     return await daofin.proposalCosts();
+  }
+  async getHouseDeposit(
+    member: string
+  ): Promise<ReturnType<DaofinPlugin['_voterToLockedAmounts']>> {
+    const daofin = DaofinPlugin__factory.connect(
+      this.pluginAddress,
+      this.web3.getProvider()
+    );
+    return await daofin._voterToLockedAmounts(member);
+  }
+  public async *resignHouse(): AsyncGenerator<ResignStepValue> {
+    const tx = await this.getDaofinInstance().resignHouse();
+
+    yield {
+      key: ResignHouseSteps.WAITING,
+      txHash: tx.hash,
+    };
+    const receipt = await tx.wait();
+
+    const daofinInterface = DaofinPlugin__factory.createInterface();
+    const log = findLog(receipt, daofinInterface, 'HouseResignRequested');
+    if (!log) {
+      throw new FailedDepositError();
+    }
+    const parsedLog = daofinInterface.parseLog(log);
+    const resigner = parsedLog.args['_houseMember'];
+    const amount = parsedLog.args['_amount'];
+    const cooldown = parsedLog.args['_cooldown'];
+
+    yield {
+      key: ResignHouseSteps.DONE,
+      txHash: tx.hash,
+      resigner,
+      amount,
+      cooldown,
+    };
+  }
+  public async *executeResignHouse(): AsyncGenerator<ExecuteResignStepValue> {
+    const tx = await this.getDaofinInstance().resignHouse();
+
+    yield {
+      key: ResignHouseSteps.WAITING,
+      txHash: tx.hash,
+    };
+    const receipt = await tx.wait();
+
+    const daofinInterface = DaofinPlugin__factory.createInterface();
+    const log = findLog(receipt, daofinInterface, 'HouseResigned');
+    if (!log) {
+      throw new FailedDepositError();
+    }
+    const parsedLog = daofinInterface.parseLog(log);
+    const resigner = parsedLog.args['_houseMember'];
+    const amount = parsedLog.args['_amount'];
+
+    yield {
+      key: ResignHouseSteps.DONE,
+      txHash: tx.hash,
+      resigner,
+      amount,
+    };
   }
 }

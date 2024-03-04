@@ -15,9 +15,11 @@ import {
 } from '../../helpers/utils';
 import {
   ADDRESS_ONE,
+  ADDRESS_ZERO,
   JudiciaryCommittee,
   MasterNodeCommittee,
   PeoplesHouseCommittee,
+  UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
   XdcValidator,
 } from '../daofin-common';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
@@ -50,6 +52,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     Mike = signers[2];
     John = signers[3];
     Beny = signers[4];
+
     dao = await deployTestDao(Alice);
 
     DaofinPlugin = new DaofinPlugin__factory(Alice);
@@ -58,6 +61,9 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     ratio = await RatioTest.deploy();
 
     xdcValidatorMock = await deployXDCValidator(Alice);
+
+    await xdcValidatorMock.addCandidate(Bob.address);
+    await xdcValidatorMock.addCandidate(Mike.address);
   });
 
   beforeEach(async () => {
@@ -67,7 +73,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     initializeParams = [
       dao.address,
       parseEther('1'),
-      XdcValidator,
+      xdcValidatorMock.address,
       [
         createCommitteeVotingSettings(
           MasterNodeCommittee,
@@ -111,96 +117,102 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
         BigNumber.from(now + 60 * 60 * 24 * 5),
-        BigNumber.from(now + 60 * 60 * 24 * 6),
-        BigNumber.from(now + 60 * 60 * 24 * 8),
       ],
-      [ADDRESS_ONE],
-      '1',
+      [Bob.address],
+      parseEther('1'),
     ];
     await daofinPlugin.initialize(...initializeParams);
   });
-  describe('create proposal', async () => {
-    it('must not revert', async () => {
-      createPropsalParams = createProposalParams(
-        '0x00',
-        [],
-        '0',
-        '0',
-        '0',
-        '0'
-      );
-      createPropsalParams[6] = {value: initializeParams[7].toString()};
+  describe('Add Jury', async () => {
+    it('Only DAO is allowed to change', async () => {
+      const daoTreasury = Alice;
+      await expect(
+        daofinPlugin
+          .connect(daoTreasury)
+          .addJudiciaryMembers([John.address, Mike.address, Beny.address])
+      ).reverted;
 
-      expect(await daofinPlugin.proposalCount()).to.be.eq(BigNumber.from('0'));
-      expect(await daofinPlugin.proposalCount()).to.not.be.eq(
-        BigNumber.from('1')
+      await dao.grant(
+        daofinPlugin.address,
+        Alice.address,
+        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
+      );
+      await expect(
+        daofinPlugin
+          .connect(daoTreasury)
+          .addJudiciaryMembers([John.address, Mike.address, Beny.address])
+      ).not.reverted;
+    });
+
+    it('must not accept zero address', async () => {
+      const daoTreasury = Alice;
+
+      await dao.grant(
+        daofinPlugin.address,
+        Alice.address,
+        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
+      );
+      await expect(
+        daofinPlugin
+          .connect(daoTreasury)
+          .addJudiciaryMembers([John.address, Mike.address, ADDRESS_ZERO])
+      ).reverted;
+    });
+
+    it('must revert for duplicated address', async () => {
+      const daoTreasury = Alice;
+
+      await dao.grant(
+        daofinPlugin.address,
+        Alice.address,
+        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
+      );
+      await expect(
+        daofinPlugin
+          .connect(daoTreasury)
+          .addJudiciaryMembers([Bob.address, Mike.address])
+      ).reverted;
+    });
+    it('must bump the counter', async () => {
+      const daoTreasury = Alice;
+
+      await dao.grant(
+        daofinPlugin.address,
+        Alice.address,
+        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
       );
 
-      await daofinPlugin.createProposal('0x00', [], '0', '0', '0', '0', {
-        value: '1',
+      const beforeJuryCount = await daofinPlugin._judiciaryCommitteeCount();
+
+      const newMembers = [John.address, Mike.address, Beny.address];
+      await daofinPlugin
+        .connect(daoTreasury)
+        .addJudiciaryMembers([John.address, Mike.address, Beny.address]);
+
+      const afterJuryCount = await daofinPlugin._judiciaryCommitteeCount();
+
+      expect(beforeJuryCount.add(newMembers.length)).eq(afterJuryCount);
+    });
+
+    it('must add to mapping', async () => {
+      const daoTreasury = Alice;
+
+      await dao.grant(
+        daofinPlugin.address,
+        Alice.address,
+        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
+      );
+
+      const newMembers = [John.address, Mike.address, Beny.address];
+
+      await daofinPlugin
+        .connect(daoTreasury)
+        .addJudiciaryMembers([John.address, Mike.address, Beny.address]);
+
+      newMembers.forEach(async member => {
+        const isMember = await daofinPlugin._judiciaryCommittee(member);
+        expect(isMember).to.be.true;
       });
-
-      expect(await daofinPlugin.proposalCount()).to.not.be.eq(
-        BigNumber.from('0')
-      );
-      expect(await daofinPlugin.proposalCount()).to.be.eq(BigNumber.from('1'));
-    });
-    it('proposalType must be set', async () => {
-      createPropsalParams = createProposalParams(
-        '0x00',
-        [],
-        '1',
-        '1',
-        '0',
-        '0'
-      );
-      createPropsalParams[6] = {value: initializeParams[7].toString()};
-
-      const proposalId = await daofinPlugin.callStatic.createProposal(
-        ...createPropsalParams
-      );
-      await expect(daofinPlugin.createProposal(...createPropsalParams)).to.not
-        .reverted;
-      expect(
-        (await daofinPlugin.getProposal(proposalId)).proposalTypeId
-      ).to.be.eq('1');
-      expect(await daofinPlugin.proposalCount()).to.be.eq('1');
-    });
-    it('proposalCost must be charged', async () => {
-      createPropsalParams = createProposalParams(
-        '0x00',
-        [],
-        '1',
-        '1',
-        '0',
-        '0'
-      );
-      createPropsalParams[6] = {value: initializeParams[7].toString()};
-
-      const daoBalanceBefore = await ethers.provider.getBalance(dao.address);
-
-      await daofinPlugin.createProposal(...createPropsalParams);
-      const daoBalanceAfter = await ethers.provider.getBalance(dao.address);
-
-      expect(daoBalanceAfter).to.be.greaterThan(daoBalanceBefore);
-
-      const isValid = daoBalanceAfter.eq(
-        daoBalanceBefore.add(initializeParams[7].toString())
-      );
-      expect(isValid).to.be.true;
-    });
-    it('must not be within voting session', async () => {
-      createPropsalParams = createProposalParams(
-        '0x00',
-        [],
-        '0',
-        '0',
-        '0',
-        '0'
-      );
-      await advanceTime(ethers, convertDaysToSeconds(4));
-      await expect(daofinPlugin.createProposal(...createPropsalParams)).to.be
-        .reverted;
     });
   });
 });

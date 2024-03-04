@@ -61,7 +61,10 @@ export function handleProposalCreated(event: ProposalCreated): void {
   entity.creationBlockNumber = event.block.number;
   entity.creationTxHash = event.transaction.hash;
   entity.snapshotBlock = event.block.number;
+  entity.startDate = event.params.startDate;
+  entity.endDate = event.params.endDate;
   entity.executed = false;
+
   for (let index = 0; index < event.params.actions.length; index++) {
     const action = event.params.actions[index];
     let actionId = getProposalId(pluginAddress, pluginProposalId)
@@ -75,11 +78,7 @@ export function handleProposalCreated(event: ProposalCreated): void {
     actionEntity.proposal = proposalId;
     actionEntity.save();
   }
-  let contract = DaofinPlugin.bind(pluginAddress);
-  const proposalObj = contract.try__proposals(pluginProposalId);
-  if (proposalObj.reverted) return;
-  entity.startDate = proposalObj.value.getStartDate();
-  entity.endDate = proposalObj.value.getEndDate();
+
   entity.save();
 }
 export function handleDeposited(event: Deposited): void {

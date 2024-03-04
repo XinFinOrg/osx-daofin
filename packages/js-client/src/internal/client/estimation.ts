@@ -94,6 +94,18 @@ export class DaofinClientEstimation
 
     return this.web3.getApproximateGasFee(estimation.toBigInt());
   };
+
+  resignHouse: () => Promise<GasFeeEstimation> = async () => {
+    const estimation = await this.getDaofinInstance().estimateGas.resignHouse();
+
+    return this.web3.getApproximateGasFee(estimation.toBigInt());
+  };
+  executeResignHouse: () => Promise<GasFeeEstimation> = async () => {
+    const estimation =
+      await this.getDaofinInstance().estimateGas.executeResignHouse();
+
+    return this.web3.getApproximateGasFee(estimation.toBigInt());
+  };
   async getProposalCosts(): Promise<BigNumberish> {
     const daofin = DaofinPlugin__factory.connect(
       this.pluginAddress,

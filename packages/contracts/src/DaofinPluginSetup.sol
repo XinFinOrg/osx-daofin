@@ -7,7 +7,7 @@ import {DAO} from "@xinfin/osx/core/dao/DAO.sol";
 import {PluginSetup, IPluginSetup} from "@xinfin/osx/framework/plugin/setup/PluginSetup.sol";
 import {PermissionLib} from "@xinfin/osx/core/permission/PermissionLib.sol";
 import {DaofinPlugin} from "./DaofinPlugin.sol";
-import "hardhat/console.sol";
+import {BaseDaofinPlugin} from "./Base/BaseDaofinPlugin.sol";
 
 contract DaofinPluginSetup is PluginSetup {
     DaofinPlugin private immutable daofinPluginBase;
@@ -25,8 +25,8 @@ contract DaofinPluginSetup is PluginSetup {
         (
             uint256 allowedAmount,
             address xdcValidator,
-            DaofinPlugin.CommitteeVotingSettings[] memory committeeVotingSettings,
-            DaofinPlugin.CommitteeVotingSettings[] memory generalCommitteeVotingSettings,
+            BaseDaofinPlugin.CommitteeVotingSettings[] memory committeeVotingSettings,
+            BaseDaofinPlugin.CommitteeVotingSettings[] memory generalCommitteeVotingSettings,
             uint64[] memory electionPeriods,
             address[] memory judiciaries,
             uint256 proposalCosts
@@ -35,8 +35,8 @@ contract DaofinPluginSetup is PluginSetup {
                 (
                     uint256,
                     address,
-                    DaofinPlugin.CommitteeVotingSettings[],
-                    DaofinPlugin.CommitteeVotingSettings[],
+                    BaseDaofinPlugin.CommitteeVotingSettings[],
+                    BaseDaofinPlugin.CommitteeVotingSettings[],
                     uint64[],
                     address[],
                     uint256
@@ -59,7 +59,7 @@ contract DaofinPluginSetup is PluginSetup {
         );
         // Prepare and set the needed permissions
         PermissionLib.MultiTargetPermission[]
-            memory permissions = new PermissionLib.MultiTargetPermission[](8);
+            memory permissions = new PermissionLib.MultiTargetPermission[](9);
 
         permissions[0] = PermissionLib.MultiTargetPermission(
             PermissionLib.Operation.Grant,
@@ -120,6 +120,14 @@ contract DaofinPluginSetup is PluginSetup {
         });
 
         permissions[7] = PermissionLib.MultiTargetPermission({
+            operation: PermissionLib.Operation.Grant,
+            where: plugin,
+            who: _dao,
+            condition: PermissionLib.NO_CONDITION,
+            permissionId: daofinPluginBase.UPDATE_PROPOSAL_COSTS_PERMISSION()
+        });
+
+        permissions[8] = PermissionLib.MultiTargetPermission({
             operation: PermissionLib.Operation.Grant,
             where: plugin,
             who: _dao,
@@ -192,6 +200,13 @@ contract DaofinPluginSetup is PluginSetup {
             DAO(payable(_dao)).EXECUTE_PERMISSION_ID()
         );
 
+        permissions[7] = PermissionLib.MultiTargetPermission({
+            operation: PermissionLib.Operation.Grant,
+            where: plugin,
+            who: _dao,
+            condition: PermissionLib.NO_CONDITION,
+            permissionId: daofinPluginBase.UPDATE_PROPOSAL_COSTS_PERMISSION()
+        });
         permissions = permissions;
     }
 

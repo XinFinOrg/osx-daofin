@@ -5,7 +5,6 @@ import {
   DaofinPlugin__factory,
   XDCValidator,
 } from '../../../typechain';
-import {ProposalCreatedEvent} from '../../../typechain/src/DaofinPlugin';
 import {deployWithProxy} from '../../../utils/helpers';
 import {deployTestDao} from '../../helpers/test-dao';
 import {deployXDCValidator} from '../../helpers/test-xdc-validator';
@@ -14,7 +13,6 @@ import {createCommitteeVotingSettings} from '../../helpers/utils';
 import {
   ADDRESS_ONE,
   ADDRESS_ZERO,
-  BYTES32_ZERO,
   JudiciaryCommittee,
   MasterNodeCommittee,
   PeoplesHouseCommittee,
@@ -22,7 +20,6 @@ import {
 } from '../daofin-common';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
 import {RatioTest, RatioTest__factory} from '@xinfin/osx-ethers';
-import {ProposalCreationSteps} from '@xinfin/osx-sdk-client';
 import {expect} from 'chai';
 import {BigNumber} from 'ethers';
 import {formatEther, parseEther} from 'ethers/lib/utils';
@@ -39,32 +36,16 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let dao: DAO;
   let DaofinPlugin: DaofinPlugin__factory;
   let daofinPlugin: DaofinPlugin;
-  let defaultInput: InitData;
   let initializeParams: Parameters<DaofinPlugin['initialize']>;
-  let createPropsalParams: Parameters<DaofinPlugin['createProposal']>;
   let Alice: SignerWithAddress;
-  let Bob: SignerWithAddress;
-  let Mike: SignerWithAddress;
-  let John: SignerWithAddress;
-  let Beny: SignerWithAddress;
-  let xdcValidatorMock: XDCValidator;
-  let ratio: RatioTest;
+
   before(async () => {
     signers = await ethers.getSigners();
     Alice = signers[0];
-    Bob = signers[1];
-    Mike = signers[2];
-    John = signers[3];
-    Beny = signers[4];
 
     dao = await deployTestDao(Alice);
 
     DaofinPlugin = new DaofinPlugin__factory(Alice);
-
-    const RatioTest = new RatioTest__factory(Alice);
-    ratio = await RatioTest.deploy();
-
-    xdcValidatorMock = await deployXDCValidator(Alice);
   });
 
   beforeEach(async () => {
@@ -73,7 +54,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
   describe('initialize', async () => {
     it('reverts if trying to re-initialize', async () => {
-      // const latestBlock = await ethers.provider.getBlock('latest');
+      const now = Math.floor(new Date().getTime() / 1000);
       initializeParams = [
         dao.address,
         parseEther('1'),
@@ -118,7 +99,10 @@ describe(PLUGIN_CONTRACT_NAME, function () {
             parseEther('1')
           ),
         ],
-        [Math.floor(new Date().getTime() / 1000) + 60 * 1000 * 60],
+        [
+          BigNumber.from(now + 60 * 60 * 24 * 3),
+          BigNumber.from(now + 60 * 60 * 24 * 5),
+        ],
         [ADDRESS_ONE],
         '10',
       ];
@@ -140,18 +124,21 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       const amount = globalSettings.houseMinAmount;
       const number = parseFloat(formatEther(amount));
       expect(number).not.be.NaN;
-      expect(number).not.be.greaterThan(parseEther('1000'));
+      expect(amount.toString()).be.eq(initializeParams['1'].toString());
     });
     it('election periods must be set', async () => {
       await daofinPlugin.initialize(...initializeParams);
       const electionPeriods = await daofinPlugin.getElectionPeriods();
 
-      expect(electionPeriods.length).to.greaterThan(0);
-      expect(electionPeriods.length).to.lessThanOrEqual(5);
+      expect(electionPeriods.length).to.eq(initializeParams[5].length / 2);
 
       electionPeriods.forEach(({startDate, endDate}, index) => {
-        expect(startDate).to.be.eq(initializeParams[5][index]);
-        expect(endDate).to.be.greaterThanOrEqual(initializeParams[5][index]);
+        expect(startDate.toNumber()).to.be.eq(
+          +initializeParams[5][index].toString()
+        );
+        expect(endDate.toNumber()).to.be.greaterThanOrEqual(
+          +initializeParams[5][index * 2].toString()
+        );
       });
     });
     it('committee list must be set', async () => {

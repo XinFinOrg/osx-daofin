@@ -60,6 +60,35 @@ export type JoinHouseStepValue =
       depositer: string;
       amount: string;
     };
+
+export enum ResignHouseSteps {
+  WAITING = 'WAITING',
+  DONE = 'DONE',
+}
+export type ResignStepValue =
+  | {
+      key: ResignHouseSteps.WAITING;
+      txHash: string;
+    }
+  | {
+      key: ResignHouseSteps.DONE;
+      txHash: string;
+      resigner: string;
+      amount: string;
+      cooldown: string;
+    };
+
+export type ExecuteResignStepValue =
+  | {
+      key: ResignHouseSteps.WAITING;
+      txHash: string;
+    }
+  | {
+      key: ResignHouseSteps.DONE;
+      txHash: string;
+      resigner: string;
+      amount: string;
+    };
 export enum AddJudiciarySteps {
   ADDING = 'ADDING',
   DONE = 'DONE',

@@ -1,5 +1,6 @@
 import networks from './networks.json';
-import {network} from 'hardhat';
+import {createAnvil} from '@viem/anvil';
+import {network, userConfig} from 'hardhat';
 
 export async function initializeFork(
   forkNetwork: string,
