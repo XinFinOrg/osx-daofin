@@ -5,35 +5,32 @@ import {
   DaofinPlugin,
   DaofinPluginSetup,
   DaofinPluginSetup__factory,
-  DaofinPlugin__factory,
   XDCValidator,
 } from '../../typechain';
 import {deployTestDao} from '../helpers/test-dao';
-import {deployXDCValidator} from '../helpers/test-xdc-validator';
 import {getNamedTypesFromMetadata} from '../helpers/types';
 import {createCommitteeVotingSettings} from '../helpers/utils';
 import {
-  ADDRESS_ONE,
   ADDRESS_ZERO,
   CREATE_PROPOSAL_TYPE_PERMISSION_ID,
   EXECUTE_PERMISSION_ID,
   JudiciaryCommittee,
   MasterNodeCommittee,
   PeoplesHouseCommittee,
-  UPDATE_COMMITTEES_LIST_PERMISSION_ID,
-  UPDATE_COMMITTEE_VOTING_SETTINGS_PERMISSION_ID,
-  UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION_ID,
-  UPDATE_ELECTION_PERIOD_PERMISSION_ID,
+  UPDATE_MIN_HOUSE_AMOUNT_PERMISSION_ID,
   UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
-  XdcValidator,
+  UPDATE_PROPOSAL_COSTS_PERMISSION_ID,
   abiCoder,
+  UPDATE_ELECTION_PERIOD_PERMISSION_ID,
 } from './daofin-common';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
 import {expect} from 'chai';
+import {BigNumber, providers} from 'ethers';
 import {parseEther} from 'ethers/lib/utils';
 import {ethers} from 'hardhat';
 
 const {PLUGIN_SETUP_CONTRACT_NAME} = DaofinPluginSetupParams;
+
 describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
   let signers: SignerWithAddress[];
   let daofinPluginSetup: DaofinPluginSetup;
@@ -46,57 +43,36 @@ describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
 
   before(async () => {
     signers = await ethers.getSigners();
-    dao = await deployTestDao(signers[0]);
+
     let Alice = signers[0];
+
     DaofinPluginSetup = new DaofinPluginSetup__factory(Alice);
     daofinPluginSetup = await DaofinPluginSetup.deploy();
-    xdcValidatorMock = await deployXDCValidator(Alice);
+
+    dao = await deployTestDao(Alice);
+
+    const now = Math.floor(new Date().getTime() / 1000);
+
     initializeParams = [
       dao.address,
       parseEther('1'),
-      xdcValidatorMock.address,
+      ADDRESS_ZERO,
       [
-        createCommitteeVotingSettings(
-          MasterNodeCommittee,
-          '0',
-          '0',
-          parseEther('1')
-        ),
-        createCommitteeVotingSettings(
-          PeoplesHouseCommittee,
-          '0',
-          '0',
-          parseEther('1')
-        ),
-        createCommitteeVotingSettings(
-          JudiciaryCommittee,
-          '0',
-          '0',
-          parseEther('1')
-        ),
+        createCommitteeVotingSettings(MasterNodeCommittee, '0', '0', '1'),
+        createCommitteeVotingSettings(PeoplesHouseCommittee, '0', '0', '1'),
+        createCommitteeVotingSettings(JudiciaryCommittee, '0', '0', '1'),
       ],
       [
-        createCommitteeVotingSettings(
-          MasterNodeCommittee,
-          '0',
-          '0',
-          parseEther('1')
-        ),
-        createCommitteeVotingSettings(
-          PeoplesHouseCommittee,
-          '0',
-          '0',
-          parseEther('1')
-        ),
-        createCommitteeVotingSettings(
-          JudiciaryCommittee,
-          '0',
-          '0',
-          parseEther('1')
-        ),
+        createCommitteeVotingSettings(MasterNodeCommittee, '0', '0', '1'),
+        createCommitteeVotingSettings(PeoplesHouseCommittee, '0', '0', '1'),
+        createCommitteeVotingSettings(JudiciaryCommittee, '0', '0', '1'),
       ],
-      [Math.floor(Date.now() / 1000)],
+      [
+        BigNumber.from(now + 60 * 60 * 24 * 3),
+        BigNumber.from(now + 60 * 60 * 24 * 5),
+      ],
       [Alice.address],
+      '1',
     ];
   });
 
@@ -130,13 +106,12 @@ describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
           initData
         );
       const allPermissions = [
-        UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION_ID,
-        UPDATE_COMMITTEE_VOTING_SETTINGS_PERMISSION_ID,
-        UPDATE_ELECTION_PERIOD_PERMISSION_ID,
-        UPDATE_COMMITTEES_LIST_PERMISSION_ID,
         UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
+        UPDATE_ELECTION_PERIOD_PERMISSION_ID,
+        UPDATE_MIN_HOUSE_AMOUNT_PERMISSION_ID,
         EXECUTE_PERMISSION_ID,
         CREATE_PROPOSAL_TYPE_PERMISSION_ID,
+        UPDATE_PROPOSAL_COSTS_PERMISSION_ID,
       ];
       expect(preparedData.preparedSetupData.permissions.length).be.eq(
         allPermissions.length
@@ -190,14 +165,14 @@ describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
           initData
         );
       const allPermissions = [
-        UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION_ID,
-        UPDATE_COMMITTEE_VOTING_SETTINGS_PERMISSION_ID,
-        UPDATE_ELECTION_PERIOD_PERMISSION_ID,
-        UPDATE_COMMITTEES_LIST_PERMISSION_ID,
         UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
-        CREATE_PROPOSAL_TYPE_PERMISSION_ID,
+        UPDATE_ELECTION_PERIOD_PERMISSION_ID,
+        UPDATE_MIN_HOUSE_AMOUNT_PERMISSION_ID,
         EXECUTE_PERMISSION_ID,
+        CREATE_PROPOSAL_TYPE_PERMISSION_ID,
+        UPDATE_PROPOSAL_COSTS_PERMISSION_ID,
       ];
+
       expect(preparedData.preparedSetupData.permissions.length).be.eq(
         allPermissions.length
       );

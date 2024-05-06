@@ -94,17 +94,11 @@ abstract contract BaseDaofinPlugin is
     bytes32 public constant PeoplesHouseCommittee = keccak256("PEOPLES_HOUSE_COMMITTEE");
     bytes32 public constant JudiciaryCommittee = keccak256("JUDICIARY_COMMITTEE");
 
-    bytes32 public constant UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION =
-        keccak256("UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION");
-
-    bytes32 public constant UPDATE_COMMITTEE_VOTING_SETTINGS_PERMISSION =
-        keccak256("UPDATE_COMMITTEE_VOTING_SETTINGS_PERMISSION");
+    bytes32 public constant UPDATE_MIN_HOUSE_AMOUNT_PERMISSION =
+        keccak256("UPDATE_MIN_HOUSE_AMOUNT_PERMISSION");
 
     bytes32 public constant UPDATE_ELECTION_PERIOD_PERMISSION =
         keccak256("UPDATE_ELECTION_PERIOD_PERMISSION");
-
-    bytes32 public constant UPDATE_COMMITTEES_LIST_PERMISSION =
-        keccak256("UPDATE_COMMITTEES_LIST_PERMISSION");
 
     bytes32 public constant UPDATE_JUDICIARY_MAPPING_PERMISSION =
         keccak256("UPDATE_JUDICIARY_MAPPING_PERMISSION");
