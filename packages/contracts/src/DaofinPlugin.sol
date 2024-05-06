@@ -86,6 +86,8 @@ contract DaofinPlugin is BaseDaofinPlugin {
             uint64 _startDate = electionPeriod_[i];
             uint64 _endDate = electionPeriod_[i + 1];
 
+            if (_startDate > _endDate) revert InValidDate();
+
             _electionPeriods.push(ElectionPeriod(_startDate, _endDate));
 
             emit ElectionPeriodUpdated(_startDate, _endDate);
