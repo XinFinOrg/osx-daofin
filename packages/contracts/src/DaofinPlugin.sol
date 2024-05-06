@@ -12,9 +12,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
     using SafeCastUpgradeable for uint256;
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
-    // A rate limiter on creation of proposal
-    uint256 public lastProposalBlockNumber;
-
     // Global settings
     DaofinGlobalSettings private _daofinGlobalSettings;
 
@@ -23,11 +20,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
     // Charge proposer with a fixed amount
     uint256 public proposalCosts;
-    /* 
-        keccake256("<COMMITTEE_NAME>") => CommitteeVotingSettings
-        NOTE: Specifies some settings for each defined committees separately
-    */
-    mapping(bytes32 => CommitteeVotingSettings) private _committeesToVotingSettings;
 
     /*
         voter => HouseDeposit
@@ -400,19 +392,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
     function isVotedOnProposal(address _voter, uint256 _proposalId) public view returns (bool) {
         return _proposals[_proposalId].voterToInfo[_voter].voted;
-    }
-
-    function isAllowedAmount(uint256 balance) private view returns (bool) {
-        if (balance == 0) return false;
-        return getGlobalSettings().houseMinAmount >= balance;
-    }
-
-    function _isValidCommitteeName(bytes32 _committee) private view returns (bool) {
-        if (_committee == bytes32(0)) return false;
-        for (uint i = 0; i < _committeesList.length; i++) {
-            if (_committeesList[i] == _committee) return true;
-        }
-        return false;
     }
 
     function _isProposalOpen(
