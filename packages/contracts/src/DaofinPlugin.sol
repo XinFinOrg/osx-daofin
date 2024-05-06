@@ -278,7 +278,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         address voter = _msgSender();
 
         // retrieve proposal Object
-        (bool open, , , uint256 proposalTypeId) = getProposal(_proposalId);
+        (bool open, , , uint256 proposalTypeId, ) = getProposal(_proposalId);
 
         // check if is not open, revert()
         if (!open) revert InValidDate();
@@ -407,7 +407,17 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
     function getProposal(
         uint256 _proposalId
-    ) public view returns (bool open, bool executed, address proposer, uint256 proposalTypeId) {
+    )
+        public
+        view
+        returns (
+            bool open,
+            bool executed,
+            address proposer,
+            uint256 proposalTypeId,
+            uint64 snapshotBlock
+        )
+    {
         open = _isProposalOpen(
             _proposals[_proposalId].startDate,
             _proposals[_proposalId].endDate,
@@ -417,17 +427,19 @@ contract DaofinPlugin is BaseDaofinPlugin {
             open,
             _proposals[_proposalId].executed,
             _proposals[_proposalId].proposer,
-            _proposals[_proposalId].proposalTypeId
+            _proposals[_proposalId].proposalTypeId,
+            _proposals[_proposalId].snapshotBlock
         );
     }
 
     function _canExecute(uint256 _proposalId) private view returns (bool isValid) {
-        (bool open, bool executed, , ) = getProposal(_proposalId);
+        (bool open, bool executed, , , uint64 snapshotBlock) = getProposal(_proposalId);
 
         // Verify that the proposal has not been executed or expired.
         if (!open && executed) {
             return false;
         }
+        if (getBlockSnapshot() > snapshotBlock) revert WrongOperation();
         if (!isMinParticipationReached(_proposalId)) return false;
         if (!isThresholdReached(_proposalId)) return false;
 
