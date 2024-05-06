@@ -603,7 +603,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // fetched _electionIndex
         // must be before start and end dates
         // otherwise it reverts
-        if (_now < _startDate && _now < _endDate) return (_startDate, _endDate);
+        if (_now < _startDate) return (_startDate, _endDate);
 
         revert CannotCreateProposalWithinElectionPeriod();
     }
