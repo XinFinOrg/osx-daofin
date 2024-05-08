@@ -564,28 +564,33 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // register if it is a candidate
         if (!getGlobalSettings().xdcValidator.isCandidate(masterNode)) revert IsNotCandidate();
 
-        // delegatee must not be a jury or house member
+        // Delegatee/Master Node must not be a jury
         if (isJudiciaryMember(delegatee_)) revert InValidAddress();
+        if (isJudiciaryMember(masterNode)) revert InValidAddress();
+
+        //  Delegatee/Master Node must not be a house member
         if (isPeopleHouse(delegatee_)) revert InValidAddress();
+        if (isPeopleHouse(masterNode)) revert InValidAddress();
 
         // Store in mapping and reverse mappings
-        _updateMasterNodeDelegatee(masterNode, delegatee_);
+        _createOrUpdateMasterNodeDelegatee(masterNode, delegatee_);
 
         emit MasterNodeDelegateeUpdated(masterNode, delegatee_);
     }
 
-    function _updateMasterNodeDelegatee(address masterNode_, address delegatee_) private {
-        address _delegatee = _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
-        address _masterNode = _masterNodeDelegatee.delegateeToMasterNode[delegatee_];
+    function _createOrUpdateMasterNodeDelegatee(address masterNode_, address delegatee_) private {
+        address _cachedMasterNode = _masterNodeDelegatee.delegateeToMasterNode[delegatee_];
+        address _cachedDelegatee = _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
 
-        // Duplicate record
-        if (_delegatee == delegatee_ && _masterNode == masterNode_) revert InValidAddress();
+        if (_cachedDelegatee == delegatee_ && _cachedMasterNode == masterNode_)
+            revert InValidAddress();
 
-        // Master Node registers at the first time
-        if (_delegatee == address(0) && _masterNode == address(0)) {
+        if (_cachedMasterNode != address(0) && _cachedDelegatee == address(0))
+            revert InValidAddress();
+
+        if (_cachedDelegatee == address(0) && _cachedMasterNode == address(0)) {
             _masterNodeDelegatee.numberOfJointMasterNodes++;
         } else {
-            // Master Node wants to change its delegatee
             if (isWithinElectionPeriod()) revert InValidTime();
         }
 
