@@ -499,8 +499,10 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
     function _addJudiciaryMember(address[] memory _members) private {
         for (uint256 i = 0; i < _members.length; i++) {
-            if (isJudiciaryMember(_members[i])) revert JudiciaryExist();
             if (_members[i] == address(0)) revert AddressIsZero();
+            if (isJudiciaryMember(_members[i])) revert JudiciaryExist();
+            if (isMasterNodeDelegatee(_members[i])) revert InValidAddress();
+            if (isPeopleHouse(_members[i])) revert InValidAddress();
             _judiciaryCommitteeCount++;
             _judiciaryCommittee[_members[i]] = true;
             emit JudiciaryChanged(_members[i], 0);
