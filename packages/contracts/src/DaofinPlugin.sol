@@ -152,6 +152,9 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // Cache msg.sender
         address proposer = _msgSender();
 
+        // Only community members are able to propose
+        if (!isValidVoter(proposer)) revert InValidVoter();
+
         // Checks the supplied XDC and Transfers to Treasury
         _checkProposalCostsAndTransfer();
 
@@ -207,6 +210,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
         proposal_.startDate = _startDate;
         proposal_.endDate = _endDate;
+        proposal_.metadata = _metadata;
         proposal_.snapshotBlock = getBlockSnapshot().toUint64();
 
         // Reduce costs
@@ -390,7 +394,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         uint64 startDate,
         uint64 endDate,
         bool executed
-    ) internal view virtual returns (bool) {
+    ) private view returns (bool) {
         uint64 currentTime = block.timestamp.toUint64();
         return startDate <= currentTime && currentTime < endDate && !executed;
     }
@@ -625,6 +629,21 @@ contract DaofinPlugin is BaseDaofinPlugin {
         if (!success) revert UnexpectedFailure();
     }
 
+    function editProposalMetadata(uint256 _proposalId, bytes calldata _metadata) external {
+        (bool open, , address proposer, , ) = getProposal(_proposalId);
+
+        // Proposal must be before election its attached election period.
+        if (!open) revert InValidTime();
+
+        // Only proposer address is able to modify metadata.
+        if (proposer != _msgSender()) revert InValidAddress();
+
+        // Change metadata
+        _proposals[_proposalId].metadata = _metadata;
+
+        emit ProposalMetadataUpdated(_proposalId, _metadata);
+    }
+
     function isMasterNodeDelegatee(address delegatee_) public view returns (bool isValid) {
         if (delegatee_ == address(0)) return false;
 
@@ -766,6 +785,10 @@ contract DaofinPlugin is BaseDaofinPlugin {
             }
         }
         return false;
+    }
+
+    function isValidVoter(address _voter) public view returns (bool) {
+        return isMasterNodeDelegatee(_voter) || isJudiciaryMember(_voter) || isPeopleHouse(_voter);
     }
 
     function getBlockSnapshot() public view returns (uint256 snapshotBlock) {

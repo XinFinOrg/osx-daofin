@@ -69,6 +69,7 @@ abstract contract BaseDaofinPlugin is
         uint64 startDate;
         uint64 endDate;
         uint64 snapshotBlock;
+        bytes metadata;
         address[] voters;
         IDAO.Action[] actions;
         mapping(address => VoteInfo) voterToInfo;
@@ -126,8 +127,8 @@ abstract contract BaseDaofinPlugin is
     event ProposalCostsReceived(uint256 _proposalId, address _proposer, uint256 _cost);
     event HouseResignRequested(address _houseMember, uint256 _amount, uint64 _cooldown);
     event HouseResigned(address _houseMember, uint256 _amount);
+    event ProposalMetadataUpdated(uint256 _proposalId, bytes _metadata);
 
-    // TODO
     function supportsInterface(
         bytes4 interfaceId
     )
