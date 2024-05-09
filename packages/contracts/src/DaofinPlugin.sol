@@ -375,8 +375,9 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // delete storage for the house member
         delete _voterToLockedAmounts[_member];
 
-        // executes and passes through treasury to withdraw the fund
-        _executeProposal(dao(), 1000000, _actions, uint8(0));
+        // executes and passes through treasury to withdraw the fund.
+        // it should be a fixed propsoal ID.
+        _executeProposal(dao(), type(uint256).max, _actions, uint8(0));
 
         emit HouseResigned(_member, _hd.amount);
     }
