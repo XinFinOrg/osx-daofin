@@ -129,7 +129,7 @@ abstract contract BaseDaofinPlugin is
 
     // TODO
     function supportsInterface(
-        bytes4
+        bytes4 interfaceId
     )
         public
         view
@@ -137,6 +137,10 @@ abstract contract BaseDaofinPlugin is
         override(ERC165Upgradeable, PluginUUPSUpgradeable, ProposalUpgradeable)
         returns (bool)
     {
-        return true;
+        return
+            interfaceId == type(ERC165Upgradeable).interfaceId ||
+            interfaceId == type(PluginUUPSUpgradeable).interfaceId ||
+            interfaceId == type(ProposalUpgradeable).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 }
