@@ -236,26 +236,15 @@ contract DaofinPlugin is BaseDaofinPlugin {
         bytes32 committee = findCommitteeName(voter_);
         if (committee == bytes32(0)) revert InValidVoter();
 
-        // Fetches voting settings for corresponding
-        // proposalTypeId_ and committee
-        CommitteeVotingSettings memory cvs = getCommitteesToVotingSettings(
-            proposalTypeId_,
-            committee
-        );
         // Fetches Tally Details for corresponding
         // proposalTypeId_ and committee
         TallyDatails memory td = getProposalTallyDetails(proposalId_, committee);
 
-        uint256 votingPower = cvs.minVotingPower;
+        uint256 votingPower = 1;
 
         // Exception for House
         if (committee == PeoplesHouseCommittee) {
-            if (_voterToLockedAmounts[voter_].amount >= getGlobalSettings().houseMinAmount) {
-                votingPower = _voterToLockedAmounts[voter_].amount;
-                votingPower = votingPower / (10 ** 18);
-            } else {
-                revert InValidAmount();
-            }
+            votingPower = _voterToLockedAmounts[voter_].amount / (10 ** 18);
         }
         if (voteOption_ == VoteOption.Yes) {
             td.yes += votingPower;
@@ -433,13 +422,13 @@ contract DaofinPlugin is BaseDaofinPlugin {
     }
 
     function _canExecute(uint256 _proposalId) private view returns (bool isValid) {
-        (bool open, bool executed, , , uint64 snapshotBlock) = getProposal(_proposalId);
+        (bool open, bool executed, , , uint64 creationSnapshotBlock) = getProposal(_proposalId);
 
         // Verify that the proposal has not been executed or expired.
         if (!open && executed) {
             return false;
         }
-        if (getBlockSnapshot() > snapshotBlock) revert WrongOperation();
+        if (getBlockSnapshot() > creationSnapshotBlock) revert WrongOperation();
         if (!isMinParticipationReached(_proposalId)) return false;
         if (!isThresholdReached(_proposalId)) return false;
 

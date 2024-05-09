@@ -49,7 +49,7 @@ abstract contract BaseDaofinPlugin is
         bytes32 name;
         uint32 supportThreshold;
         uint32 minParticipation;
-        uint256 minVotingPower;
+        // uint256 minVotingPower;
     }
     struct VoteInfo {
         bool voted;
