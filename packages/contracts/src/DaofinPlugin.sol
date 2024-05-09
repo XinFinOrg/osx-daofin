@@ -115,22 +115,22 @@ contract DaofinPlugin is BaseDaofinPlugin {
         _committeesList.push(JudiciaryCommittee);
 
         // 0 = proposalType - Grants
-        _createProposalType(grantSettings_);
+        _createOrModifyProposalType(0, grantSettings_);
 
         // 1 = proposalType - Creation of proposalType
-        _createProposalType(generalSettings_);
+        _createOrModifyProposalType(1, generalSettings_);
 
         // 2 = proposalType - Changing voting settings
-        _createProposalType(generalSettings_);
+        _createOrModifyProposalType(2, generalSettings_);
 
         // 3 = proposalType - ElectionPeriods
-        _createProposalType(generalSettings_);
+        _createOrModifyProposalType(3, generalSettings_);
 
         // 4 = proposalType - Judiciary Replacement
-        _createProposalType(generalSettings_);
+        _createOrModifyProposalType(4, generalSettings_);
 
         // 5 = proposalCosts - Proposal Costs
-        _createProposalType(generalSettings_);
+        _createOrModifyProposalType(5, generalSettings_);
 
         _addJudiciaryMember(judiciaries_);
 
@@ -464,16 +464,28 @@ contract DaofinPlugin is BaseDaofinPlugin {
     function createProposalType(
         CommitteeVotingSettings[] memory _committeesVotingSettings
     ) public auth(CREATE_PROPOSAL_TYPE_PERMISSION) returns (uint256 proposalTypeId) {
-        return _createProposalType(_committeesVotingSettings);
+        proposalTypeId = _createOrModifyProposalType(
+            _createProposalTypeId(),
+            _committeesVotingSettings
+        );
+        emit ProposalTypeCreated(proposalTypeId, _committeesVotingSettings);
     }
 
-    function _createProposalType(
+    function modifyProposalType(
+        uint256 _proposalTypeId,
         CommitteeVotingSettings[] memory _committeesVotingSettings
-    ) private returns (uint256 proposalTypeId) {
-        proposalTypeId = _createProposalTypeId();
+    ) public auth(MODIFY_PROPOSAL_TYPE_PERMISSION) returns (uint256 proposalTypeId) {
+        proposalTypeId = _createOrModifyProposalType(_proposalTypeId, _committeesVotingSettings);
+        emit ProposalTypeCreated(proposalTypeId, _committeesVotingSettings);
+    }
 
-        require(_committeesVotingSettings.length > 0, "invalid settings length");
+    function _createOrModifyProposalType(
+        uint256 _proposalTypeId,
+        CommitteeVotingSettings[] memory _committeesVotingSettings
+    ) private returns (uint256) {
+        require(_committeesVotingSettings.length == 3, "invalid settings length");
 
+        ///
         // Assigning committees to the right variables
         for (uint256 i = 0; i < _committeesVotingSettings.length; i++) {
             bytes32 committeeName = _committeesVotingSettings[i].name;
@@ -485,11 +497,11 @@ contract DaofinPlugin is BaseDaofinPlugin {
             ) {
                 revert InValidCommittee();
             }
-            _proposalTypesToCommiteesVotingSettings[proposalTypeId][
+            _proposalTypesToCommiteesVotingSettings[_proposalTypeId][
                 committeeName
             ] = _committeesVotingSettings[i];
         }
-        emit ProposalTypeCreated(proposalTypeId, _committeesVotingSettings);
+        return _proposalTypeId;
     }
 
     function proposalTypeCount() public view returns (uint256) {

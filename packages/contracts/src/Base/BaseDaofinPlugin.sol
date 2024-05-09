@@ -107,6 +107,8 @@ abstract contract BaseDaofinPlugin is
 
     bytes32 public constant CREATE_PROPOSAL_TYPE_PERMISSION =
         keccak256("CREATE_PROPOSAL_TYPE_PERMISSION");
+    bytes32 public constant MODIFY_PROPOSAL_TYPE_PERMISSION =
+        keccak256("MODIFY_PROPOSAL_TYPE_PERMISSION");
     bytes32 public constant UPDATE_PROPOSAL_COSTS_PERMISSION =
         keccak256("UPDATE_PROPOSAL_COSTS_PERMISSION");
 
