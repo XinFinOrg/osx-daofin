@@ -115,22 +115,22 @@ contract DaofinPlugin is BaseDaofinPlugin {
         _committeesList.push(JudiciaryCommittee);
 
         // 0 = proposalType - Grants
-        _createOrModifyProposalType(0, grantSettings_);
+        _createOrModifyProposalType(_createProposalTypeId(), grantSettings_);
 
         // 1 = proposalType - Creation of proposalType
-        _createOrModifyProposalType(1, generalSettings_);
+        _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
 
         // 2 = proposalType - Changing voting settings
-        _createOrModifyProposalType(2, generalSettings_);
+        _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
 
         // 3 = proposalType - ElectionPeriods
-        _createOrModifyProposalType(3, generalSettings_);
+        _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
 
         // 4 = proposalType - Judiciary Replacement
-        _createOrModifyProposalType(4, generalSettings_);
+        _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
 
         // 5 = proposalCosts - Proposal Costs
-        _createOrModifyProposalType(5, generalSettings_);
+        _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
 
         _addJudiciaryMember(judiciaries_);
 
@@ -369,7 +369,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // the flag must be false,
         // means the user has
         // already submitted its request
-        if (_hd.isActive) revert InValidTime();
+        if (_hd.isActive) revert InValidStatus();
         if (_hd.endOfCooldownPeriod >= _now) revert InValidTime();
 
         // makes withdraw action
@@ -433,7 +433,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         if (!open && executed) {
             return false;
         }
-        if (getBlockSnapshot() > creationSnapshotBlock) revert WrongOperation();
+        // if (getBlockSnapshot() <= creationSnapshotBlock) revert WrongOperation();
         if (!isMinParticipationReached(_proposalId)) return false;
         if (!isThresholdReached(_proposalId)) return false;
 
@@ -475,6 +475,8 @@ contract DaofinPlugin is BaseDaofinPlugin {
         uint256 _proposalTypeId,
         CommitteeVotingSettings[] memory _committeesVotingSettings
     ) public auth(MODIFY_PROPOSAL_TYPE_PERMISSION) returns (uint256 proposalTypeId) {
+        require(proposalTypeCount() > _proposalTypeId, "Invalid PT");
+
         proposalTypeId = _createOrModifyProposalType(_proposalTypeId, _committeesVotingSettings);
         emit ProposalTypeCreated(proposalTypeId, _committeesVotingSettings);
     }
@@ -484,7 +486,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
         CommitteeVotingSettings[] memory _committeesVotingSettings
     ) private returns (uint256) {
         require(_committeesVotingSettings.length == 3, "invalid settings length");
-
         ///
         // Assigning committees to the right variables
         for (uint256 i = 0; i < _committeesVotingSettings.length; i++) {

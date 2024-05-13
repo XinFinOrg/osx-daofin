@@ -28,6 +28,7 @@ error UnexpectedFailure();
 error InValidTime();
 error CannotCreateProposalWithinElectionPeriod();
 error WrongOperation();
+error InValidStatus();
 
 abstract contract BaseDaofinPlugin is
     Initializable,
