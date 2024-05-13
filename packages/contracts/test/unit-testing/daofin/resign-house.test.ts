@@ -2,6 +2,8 @@ import {DaofinPluginSetupParams} from '../../../plugin-settings';
 import {
   DaofinPlugin,
   DaofinPlugin__factory,
+  MockTimestampOracle,
+  MockTimestampOracle__factory,
   XDCValidator,
 } from '../../../typechain';
 import {deployWithProxy} from '../../../utils/helpers';
@@ -44,6 +46,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let Beny: SignerWithAddress;
   let xdcValidatorMock: XDCValidator;
   let ratio: RatioTest;
+  let MockTimestampOracle: MockTimestampOracle__factory;
+  let mockTimestampOracle: MockTimestampOracle;
   before(async () => {
     signers = await ethers.getSigners();
     Alice = signers[0];
@@ -59,11 +63,15 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     ratio = await RatioTest.deploy();
 
     xdcValidatorMock = await deployXDCValidator(Alice);
+
+    MockTimestampOracle = new MockTimestampOracle__factory(Alice);
+    mockTimestampOracle = await MockTimestampOracle.deploy();
   });
 
   beforeEach(async () => {
     daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
 
+    const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber();
     initializeParams = [
       dao.address,
       parseEther('1'),
@@ -109,8 +117,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         ),
       ],
       [
-        Math.floor(new Date().getTime() / 1000) + 60 * 1000 * 60,
-        Math.floor(new Date().getTime() / 1000) + 60 * 2000 * 60,
+        BigNumber.from(now + 60 * 60 * 24 * 1),
+        BigNumber.from(now + 60 * 60 * 24 * 3),
       ],
       [ADDRESS_ONE],
       parseEther('1'),
@@ -236,6 +244,22 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await expect(daofinPlugin.connect(from).executeResignHouse()).to.not
         .reverted;
       await expect(daofinPlugin.connect(from).executeResignHouse()).to.reverted;
+    });
+    it('must not be able to vote if already sent resign request', async () => {
+      const from = Alice;
+
+      const value = parseEther('2');
+
+      await daofinPlugin.joinHouse({value});
+
+      await daofinPlugin.connect(from).resignHouse();
+      createPropsalParams = createProposalParams('0x00', [], 0, '0', '0', '0');
+      createPropsalParams[6] = {
+        value: '1',
+      };
+
+      await expect(daofinPlugin.createProposal(...createPropsalParams)).to.be
+        .reverted;
     });
   });
 });

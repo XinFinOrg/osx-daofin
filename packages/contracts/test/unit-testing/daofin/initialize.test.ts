@@ -186,10 +186,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
               parseInt(initializeParams[4][i].minParticipation.toString())
             );
 
-          expect(settings.minVotingPower)
-            .to.greaterThan(0)
-            .to.equal(initializeParams[3][i].minVotingPower.toString());
-
           expect(settings.supportThreshold)
             .to.greaterThan(0)
             .to.equal(

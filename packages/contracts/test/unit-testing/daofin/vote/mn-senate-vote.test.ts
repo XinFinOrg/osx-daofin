@@ -134,6 +134,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       (await daofinPlugin.initialize(...initializeParams)).wait();
 
+      await daofinPlugin.connect(Alice).joinHouse({value: parseEther('1')});
+
       createPropsalParams = createProposalParams(
         '0x00',
         [],
@@ -177,11 +179,14 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         proposalId,
         voteCommittee
       );
-      expect(tallyAfter.no.toString()).not.be.eq(parseEther('1').toString());
-      expect(tallyAfter.no.toString()).be.eq(parseEther('0').toString());
+      expect(tallyAfter.no.toString()).not.be.eq(BigInt('1').toString());
+      expect(tallyAfter.no.toString()).be.eq(BigInt('0').toString());
 
-      expect(tallyAfter.yes.toString()).not.be.eq(parseEther('0').toString());
-      expect(tallyAfter.yes.toString()).be.eq(parseEther('1').toString());
+      expect(tallyAfter.yes.toString()).not.be.eq(BigInt('0').toString());
+      expect(tallyAfter.yes.toString()).be.eq(BigInt('1').toString());
+
+      expect(tallyAfter.abstain.toString()).not.be.eq(BigInt('1').toString());
+      expect(tallyAfter.abstain.toString()).be.eq(BigInt('0').toString());
     });
     it('MasterNode: must record voter address', async () => {
       const voter = John;

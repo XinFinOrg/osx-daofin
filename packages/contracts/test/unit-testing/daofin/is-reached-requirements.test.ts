@@ -16,20 +16,16 @@ import {
   createProposalParams,
 } from '../../helpers/utils';
 import {
-  ADDRESS_ONE,
-  ADDRESS_ZERO,
   JudiciaryCommittee,
   MasterNodeCommittee,
   PeoplesHouseCommittee,
-  UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
-  XdcValidator,
 } from '../daofin-common';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
 import {DAO, RatioTest, RatioTest__factory} from '@xinfin/osx-ethers';
 import {expect} from 'chai';
 import {BigNumber} from 'ethers';
 import {parseEther} from 'ethers/lib/utils';
-import {ethers, network} from 'hardhat';
+import {ethers} from 'hardhat';
 
 const {PLUGIN_CONTRACT_NAME} = DaofinPluginSetupParams;
 
@@ -134,6 +130,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     ];
 
     (await daofinPlugin.initialize(...initializeParams)).wait();
+
+    await daofinPlugin.connect(Alice).joinHouse({value: parseEther('1')});
 
     createPropsalParams = createProposalParams(
       '0x00',
@@ -270,6 +268,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
 
       const canExecute = await daofinPlugin.canExecute(proposalId);
+
       expect(canExecute).to.be.true;
     });
   });

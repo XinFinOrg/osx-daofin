@@ -17,9 +17,12 @@ import {
 } from '../../helpers/utils';
 import {
   ADDRESS_ONE,
+  ADDRESS_ZERO,
   JudiciaryCommittee,
   MasterNodeCommittee,
   PeoplesHouseCommittee,
+  UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
+  UPDATE_PROPOSAL_COSTS_PERMISSION_ID,
   XdcValidator,
 } from '../daofin-common';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
@@ -54,6 +57,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     Mike = signers[2];
     John = signers[3];
     Beny = signers[4];
+
     dao = await deployTestDao(Alice);
 
     DaofinPlugin = new DaofinPlugin__factory(Alice);
@@ -61,9 +65,10 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     const RatioTest = new RatioTest__factory(Alice);
     ratio = await RatioTest.deploy();
 
-    xdcValidatorMock = await deployXDCValidator(Alice);
     MockTimestampOracle = new MockTimestampOracle__factory(Alice);
     mockTimestampOracle = await MockTimestampOracle.deploy();
+
+    xdcValidatorMock = await deployXDCValidator(Alice);
   });
 
   beforeEach(async () => {
@@ -117,16 +122,16 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
         BigNumber.from(now + 60 * 60 * 24 * 5),
-        BigNumber.from(now + 60 * 60 * 24 * 6),
-        BigNumber.from(now + 60 * 60 * 24 * 8),
       ],
-      [Alice.address],
+      [Bob.address],
       '1',
     ];
     await daofinPlugin.initialize(...initializeParams);
+
+    await daofinPlugin.joinHouse({value: parseEther('1')});
   });
-  describe('create proposal', async () => {
-    it('must not revert', async () => {
+  describe('Modify Proposal Metadata', async () => {
+    it('Modify proposal', async () => {
       createPropsalParams = createProposalParams(
         '0x00',
         [],
@@ -135,78 +140,29 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         '0',
         '0'
       );
-      createPropsalParams[6] = {value: initializeParams[7].toString()};
-
-      expect(await daofinPlugin.proposalCount()).to.be.eq(BigNumber.from('0'));
-      expect(await daofinPlugin.proposalCount()).to.not.be.eq(
-        BigNumber.from('1')
-      );
-
-      await daofinPlugin.createProposal('0x00', [], '0', '0', '0', '0', {
+      createPropsalParams[6] = {
         value: '1',
-      });
-
-      expect(await daofinPlugin.proposalCount()).to.not.be.eq(
-        BigNumber.from('0')
-      );
-      expect(await daofinPlugin.proposalCount()).to.be.eq(BigNumber.from('1'));
-    });
-    it('proposalType must be set', async () => {
-      createPropsalParams = createProposalParams(
-        '0x00',
-        [],
-        '1',
-        '1',
-        '0',
-        '0'
-      );
-      createPropsalParams[6] = {value: initializeParams[7].toString()};
+      };
 
       const proposalId = await daofinPlugin.callStatic.createProposal(
         ...createPropsalParams
       );
-      await expect(daofinPlugin.createProposal(...createPropsalParams)).to.not
+
+      const proposalTx = await daofinPlugin.createProposal(
+        ...createPropsalParams
+      );
+      await proposalTx.wait();
+
+      await expect(daofinPlugin.editProposalMetadata(proposalId, '0x01')).to
         .reverted;
-      expect(
-        (await daofinPlugin.getProposal(proposalId)).proposalTypeId
-      ).to.be.eq('1');
-      expect(await daofinPlugin.proposalCount()).to.be.eq('1');
-    });
-    it('proposalCost must be charged', async () => {
-      createPropsalParams = createProposalParams(
-        '0x00',
-        [],
-        '1',
-        '1',
-        '0',
-        '0'
-      );
-      createPropsalParams[6] = {value: initializeParams[7].toString()};
 
-      const daoBalanceBefore = await ethers.provider.getBalance(dao.address);
-
-      await daofinPlugin.createProposal(...createPropsalParams);
-      const daoBalanceAfter = await ethers.provider.getBalance(dao.address);
-
-      expect(daoBalanceAfter).to.be.greaterThan(daoBalanceBefore);
-
-      const isValid = daoBalanceAfter.eq(
-        daoBalanceBefore.add(initializeParams[7].toString())
-      );
-      expect(isValid).to.be.true;
-    });
-    it('must not be within voting session', async () => {
-      createPropsalParams = createProposalParams(
-        '0x00',
-        [],
-        '0',
-        '0',
-        '0',
-        '0'
-      );
       await advanceTime(ethers, convertDaysToSeconds(4));
-      await expect(daofinPlugin.createProposal(...createPropsalParams)).to.be
+
+      await expect(daofinPlugin.editProposalMetadata(proposalId, '0x01')).to.not
         .reverted;
+
+      const proposal = await daofinPlugin._proposals(proposalId);
+      expect(proposal.metadata).to.equal('0x01');
     });
   });
 });

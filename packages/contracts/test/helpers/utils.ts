@@ -13,13 +13,12 @@ export function createCommitteeVotingSettings(
   name: PromiseOrValue<BytesLike>,
   qourum: BigNumberish,
   threshold: BigNumberish,
-  votingPower: BigNumberish
+  _: BigNumberish
 ): BaseDaofinPlugin.CommitteeVotingSettingsStruct {
   return {
     name,
     minParticipation: qourum,
     supportThreshold: threshold,
-    minVotingPower: votingPower,
   };
 }
 

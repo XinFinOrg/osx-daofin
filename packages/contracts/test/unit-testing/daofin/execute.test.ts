@@ -130,6 +130,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       (await daofinPlugin.initialize(...initializeParams)).wait();
 
+      await daofinPlugin.joinHouse({value: parseEther('1')});
+
       createPropsalParams = createProposalParams(
         '0x00',
         [],
@@ -155,7 +157,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await daofinPlugin
         .connect(Mike)
         .updateOrJoinMasterNodeDelegatee(John.address);
-      await daofinPlugin.connect(Alice).joinHouse({value: parseEther('1')});
 
       await advanceTime(ethers, convertDaysToSeconds(2));
     });
@@ -186,6 +187,211 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
 
       await expect(daofinPlugin.execute(proposalId)).to.reverted;
+    });
+  });
+  describe('Execute only for Jury', async () => {
+    beforeEach(async () => {
+      daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
+      const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); //Math.floor(Date.now() / 1000);
+
+      initializeParams = [
+        dao.address,
+        parseEther('1'),
+        xdcValidatorMock.address,
+        [
+          createCommitteeVotingSettings(MasterNodeCommittee, '0', '0', '1'),
+          createCommitteeVotingSettings(PeoplesHouseCommittee, '0', '0', '1'),
+          createCommitteeVotingSettings(
+            JudiciaryCommittee,
+            '200000',
+            '400000',
+            '1'
+          ),
+        ],
+        [
+          createCommitteeVotingSettings(
+            MasterNodeCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+          createCommitteeVotingSettings(
+            PeoplesHouseCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+          createCommitteeVotingSettings(
+            JudiciaryCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+        ],
+        [
+          BigNumber.from(now + 60 * 60 * 24 * 1),
+          BigNumber.from(now + 60 * 60 * 24 * 3),
+          BigNumber.from(now + 60 * 60 * 24 * 4),
+          BigNumber.from(now + 60 * 60 * 24 * 6),
+          BigNumber.from(now + 60 * 60 * 24 * 7),
+          BigNumber.from(now + 60 * 60 * 24 * 9),
+        ],
+        [Bob.address, Mike.address, Alice.address, John.address],
+        '1',
+      ];
+
+      (await daofinPlugin.initialize(...initializeParams)).wait();
+
+      createPropsalParams = createProposalParams(
+        '0x00',
+        [],
+        electionIndex,
+        '0',
+        '0',
+        '0'
+      );
+      createPropsalParams[6] = {
+        value: '1',
+      };
+
+      proposalId = await daofinPlugin.callStatic.createProposal(
+        ...createPropsalParams
+      );
+
+      const proposalTx = await daofinPlugin.createProposal(
+        ...createPropsalParams
+      );
+      await proposalTx.wait();
+
+      await advanceTime(ethers, convertDaysToSeconds(2));
+    });
+    it('must be able to execute', async () => {
+      await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
+
+      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+
+      await expect(daofinPlugin.execute(proposalId)).to.reverted;
+
+      await daofinPlugin.connect(John).vote(proposalId, '2', false);
+      await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
+      await daofinPlugin.connect(Mike).vote(proposalId, '2', false);
+
+      await expect(daofinPlugin.execute(proposalId)).not.be.reverted;
+    });
+    it('must not be able to execute due to lack of YES votes', async () => {
+      await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
+
+      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+      await daofinPlugin.connect(John).vote(proposalId, '1', false);
+      await daofinPlugin.connect(Alice).vote(proposalId, '1', false);
+      await daofinPlugin.connect(Mike).vote(proposalId, '3', false);
+
+      await expect(daofinPlugin.execute(proposalId)).to.reverted;
+    });
+  });
+  describe('Execute only for Senate', async () => {
+    beforeEach(async () => {
+      daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
+      xdcValidatorMock = await deployXDCValidator(Alice);
+      const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); //Math.floor(Date.now() / 1000);
+
+      initializeParams = [
+        dao.address,
+        parseEther('1'),
+        xdcValidatorMock.address,
+        [
+          createCommitteeVotingSettings(
+            MasterNodeCommittee,
+            '500000',
+            '500000',
+            '1'
+          ),
+          createCommitteeVotingSettings(PeoplesHouseCommittee, '0', '0', '1'),
+          createCommitteeVotingSettings(JudiciaryCommittee, '0', '0', '1'),
+        ],
+        [
+          createCommitteeVotingSettings(
+            MasterNodeCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+          createCommitteeVotingSettings(
+            PeoplesHouseCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+          createCommitteeVotingSettings(
+            JudiciaryCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+        ],
+        [
+          BigNumber.from(now + 60 * 60 * 24 * 1),
+          BigNumber.from(now + 60 * 60 * 24 * 3),
+          BigNumber.from(now + 60 * 60 * 24 * 4),
+          BigNumber.from(now + 60 * 60 * 24 * 6),
+          BigNumber.from(now + 60 * 60 * 24 * 7),
+          BigNumber.from(now + 60 * 60 * 24 * 9),
+        ],
+        [Bob.address, Alice.address],
+        '1',
+      ];
+
+      (await daofinPlugin.initialize(...initializeParams)).wait();
+
+      createPropsalParams = createProposalParams(
+        '0x00',
+        [],
+        electionIndex,
+        '0',
+        '0',
+        '0'
+      );
+      createPropsalParams[6] = {
+        value: '1',
+      };
+
+      proposalId = await daofinPlugin.callStatic.createProposal(
+        ...createPropsalParams
+      );
+
+      const proposalTx = await daofinPlugin.createProposal(
+        ...createPropsalParams
+      );
+      await proposalTx.wait();
+
+      await xdcValidatorMock.addCandidate(Mike.address);
+      await daofinPlugin
+        .connect(Mike)
+        .updateOrJoinMasterNodeDelegatee(John.address);
+
+      await xdcValidatorMock.addCandidate(Beny.address);
+      await daofinPlugin
+        .connect(Beny)
+        .updateOrJoinMasterNodeDelegatee(Tony.address);
+
+      await advanceTime(ethers, convertDaysToSeconds(2));
+    });
+    it('must be able to execute', async () => {
+      await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
+
+      await daofinPlugin.connect(Tony).vote(proposalId, '2', false);
+
+      await daofinPlugin.connect(John).vote(proposalId, '2', false);
+
+      await expect(daofinPlugin.execute(proposalId)).not.be.reverted;
+    });
+    it('must not be able to execute due to lack of YES votes', async () => {
+      await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
+
+      await daofinPlugin.connect(Tony).vote(proposalId, '2', false);
+      await daofinPlugin.connect(John).vote(proposalId, '1', false);
+
+      await expect(daofinPlugin.execute(proposalId)).not.be.reverted;
     });
   });
 });

@@ -22,6 +22,7 @@ import {
   UPDATE_PROPOSAL_COSTS_PERMISSION_ID,
   abiCoder,
   UPDATE_ELECTION_PERIOD_PERMISSION_ID,
+  MODIFY_PROPOSAL_TYPE_PERMISSION_ID,
 } from './daofin-common';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
 import {expect} from 'chai';
@@ -38,8 +39,6 @@ describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
   let dao: DAO;
   let initializeParams: Parameters<DaofinPlugin['initialize']>;
   let initData: string;
-  let Alice: SignerWithAddress;
-  let xdcValidatorMock: XDCValidator;
 
   before(async () => {
     signers = await ethers.getSigners();
@@ -52,7 +51,6 @@ describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
     dao = await deployTestDao(Alice);
 
     const now = Math.floor(new Date().getTime() / 1000);
-
     initializeParams = [
       dao.address,
       parseEther('1'),
@@ -112,6 +110,7 @@ describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
         EXECUTE_PERMISSION_ID,
         CREATE_PROPOSAL_TYPE_PERMISSION_ID,
         UPDATE_PROPOSAL_COSTS_PERMISSION_ID,
+        MODIFY_PROPOSAL_TYPE_PERMISSION_ID,
       ];
       expect(preparedData.preparedSetupData.permissions.length).be.eq(
         allPermissions.length
