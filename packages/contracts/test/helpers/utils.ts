@@ -89,3 +89,26 @@ export const advanceTime = async (
 export const convertDaysToSeconds = (days: number, hours: number = 24) => {
   return days * 60 * 60 * hours;
 };
+
+export const mineBlocks = async (
+  lib: typeof ethers & HardhatEthersHelpers,
+  numberOfBlocks: number
+) => {
+  
+    for (let index = 0; index < numberOfBlocks; index++) {
+      await lib.provider.send('evm_mine',[]);
+    }
+  
+};
+export const mineBlocksForExecutionDelay = async (
+  lib: typeof ethers & HardhatEthersHelpers,
+  daofin: DaofinPlugin
+) => {
+  let delayLimit=await daofin.EXECUTION_DELAY_BLOCK()
+  delayLimit=delayLimit.add(5);
+  
+  for (let index = 0; index < delayLimit.toNumber(); index++) {
+      await mineBlocks(lib,index)
+  }
+  
+};

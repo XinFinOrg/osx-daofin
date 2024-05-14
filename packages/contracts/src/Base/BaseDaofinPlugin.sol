@@ -70,6 +70,7 @@ abstract contract BaseDaofinPlugin is
         uint64 startDate;
         uint64 endDate;
         uint64 snapshotBlock;
+        uint64 executionBlockDelay;
         bytes metadata;
         address[] voters;
         IDAO.Action[] actions;
@@ -112,6 +113,8 @@ abstract contract BaseDaofinPlugin is
         keccak256("MODIFY_PROPOSAL_TYPE_PERMISSION");
     bytes32 public constant UPDATE_PROPOSAL_COSTS_PERMISSION =
         keccak256("UPDATE_PROPOSAL_COSTS_PERMISSION");
+
+    uint64 public constant EXECUTION_DELAY_BLOCK = 10;
 
     event JudiciaryChanged(address _member, uint256 _action); // action: 0 = Add, 1 = Remove
     event ElectionPeriodUpdated(uint64 _start, uint64 _end);

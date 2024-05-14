@@ -14,6 +14,8 @@ import {
   convertDaysToSeconds,
   createCommitteeVotingSettings,
   createProposalParams,
+  mineBlocks,
+  mineBlocksForExecutionDelay,
 } from '../../helpers/utils';
 import {
   JudiciaryCommittee,
@@ -217,7 +219,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     const house = [Alice];
     it('must be greater that equal to passrate', async () => {
       const isReached = await daofinPlugin.isThresholdReached(proposalId);
-      console.log(isReached);
 
       expect(isReached).to.be.false;
 
@@ -267,9 +268,23 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await daofinPlugin.connect(Beny).vote(proposalId, '2', false);
       await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
 
+      await mineBlocksForExecutionDelay(ethers, daofinPlugin);
+
       const canExecute = await daofinPlugin.canExecute(proposalId);
 
       expect(canExecute).to.be.true;
+    });
+    it('must not pass execution delay', async () => {
+      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+      await daofinPlugin.connect(Beny).vote(proposalId, '2', false);
+      await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
+
+      // ignore block delay
+      // await mineBlocksForExecutionDelay(ethers, daofinPlugin);
+
+      const canExecute = await daofinPlugin.canExecute(proposalId);
+
+      expect(canExecute).to.be.false;
     });
   });
 });

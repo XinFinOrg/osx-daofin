@@ -15,6 +15,7 @@ import {
   convertDaysToSeconds,
   createCommitteeVotingSettings,
   createProposalParams,
+  mineBlocksForExecutionDelay,
 } from '../../helpers/utils';
 import {
   EXECUTE_PERMISSION_ID,
@@ -177,6 +178,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
 
+      await mineBlocksForExecutionDelay(ethers, daofinPlugin);
+
       await expect(daofinPlugin.execute(proposalId)).to.not.reverted;
     });
     it('must not be able to execute(no enough votes)', async () => {
@@ -276,6 +279,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
       await daofinPlugin.connect(Mike).vote(proposalId, '2', false);
 
+      await mineBlocksForExecutionDelay(ethers, daofinPlugin);
+
       await expect(daofinPlugin.execute(proposalId)).not.be.reverted;
     });
     it('must not be able to execute due to lack of YES votes', async () => {
@@ -285,6 +290,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await daofinPlugin.connect(John).vote(proposalId, '1', false);
       await daofinPlugin.connect(Alice).vote(proposalId, '1', false);
       await daofinPlugin.connect(Mike).vote(proposalId, '3', false);
+
+      await mineBlocksForExecutionDelay(ethers, daofinPlugin);
 
       await expect(daofinPlugin.execute(proposalId)).to.reverted;
     });
@@ -383,6 +390,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       await daofinPlugin.connect(John).vote(proposalId, '2', false);
 
+      await mineBlocksForExecutionDelay(ethers, daofinPlugin);
       await expect(daofinPlugin.execute(proposalId)).not.be.reverted;
     });
     it('must not be able to execute due to lack of YES votes', async () => {
@@ -391,6 +399,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await daofinPlugin.connect(Tony).vote(proposalId, '2', false);
       await daofinPlugin.connect(John).vote(proposalId, '1', false);
 
+      await mineBlocksForExecutionDelay(ethers, daofinPlugin);
       await expect(daofinPlugin.execute(proposalId)).not.be.reverted;
     });
   });
