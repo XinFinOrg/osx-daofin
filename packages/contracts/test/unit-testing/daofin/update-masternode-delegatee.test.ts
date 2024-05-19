@@ -17,6 +17,7 @@ import {
 } from '../../helpers/utils';
 import {
   ADDRESS_ONE,
+  ADDRESS_TWO,
   ADDRESS_ZERO,
   JudiciaryCommittee,
   MasterNodeCommittee,
@@ -249,6 +250,81 @@ describe(PLUGIN_CONTRACT_NAME, function () {
           .connect(masterNode)
           .updateOrJoinMasterNodeDelegatee(newDelegatee)
       ).not.reverted;
+    });
+
+    it('M1 -> D1, M2->D2 ', async () => {
+      const masterNode1 = Bob;
+      const masterNode2 = Mike;
+      const delegatee1 = John.address;
+      const delegatee2 = Beny.address;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee1)
+      ).not.reverted;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode2)
+          .updateOrJoinMasterNodeDelegatee(delegatee2)
+      ).not.reverted;
+    });
+    it('M1 -> D1, M2->D2, M1->D3 ', async () => {
+      const masterNode1 = Bob;
+      const masterNode2 = Mike;
+      const delegatee1 = John.address;
+      const delegatee2 = Beny.address;
+      const delegatee3 = ADDRESS_TWO;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee1)
+      ).not.reverted;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode2)
+          .updateOrJoinMasterNodeDelegatee(delegatee2)
+      ).not.reverted;
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee3)
+      ).not.reverted;
+    });
+    it('M1 -> D1, M2->D2, !M1->D2 ', async () => {
+      const masterNode1 = Bob;
+      const masterNode2 = Mike;
+      const delegatee1 = John.address;
+      const delegatee2 = Beny.address;
+      const delegatee3 = ADDRESS_TWO;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee1)
+      ).not.reverted;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode2)
+          .updateOrJoinMasterNodeDelegatee(delegatee2)
+      ).not.reverted;
+
+      // must be reverted.
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee2)
+      ).reverted;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode2)
+          .updateOrJoinMasterNodeDelegatee(delegatee1)
+      ).reverted;
     });
   });
 });

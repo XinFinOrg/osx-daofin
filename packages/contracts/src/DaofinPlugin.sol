@@ -588,11 +588,14 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // register if it is a candidate
         if (!getGlobalSettings().xdcValidator.isCandidate(masterNode)) revert IsNotCandidate();
 
+        // delegatee must not be a candidate
+        if (getGlobalSettings().xdcValidator.isCandidate(delegatee_)) revert InValidAddress();
+
         // Delegatee/Master Node must not be a jury
         if (isJudiciaryMember(delegatee_)) revert InValidAddress();
         if (isJudiciaryMember(masterNode)) revert InValidAddress();
 
-        //  Delegatee/Master Node must not be a house member
+        // Delegatee/Master Node must not be a house member
         if (isPeopleHouse(delegatee_)) revert InValidAddress();
         if (isPeopleHouse(masterNode)) revert InValidAddress();
 
@@ -609,8 +612,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         if (_cachedDelegatee == delegatee_ && _cachedMasterNode == masterNode_)
             revert InValidAddress();
 
-        if (_cachedMasterNode != address(0) && _cachedDelegatee == address(0))
-            revert InValidAddress();
+        if (_cachedMasterNode != address(0)) revert InValidAddress();
 
         if (_cachedDelegatee == address(0) && _cachedMasterNode == address(0)) {
             _masterNodeDelegatee.numberOfJointMasterNodes++;
