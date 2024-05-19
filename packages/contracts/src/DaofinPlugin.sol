@@ -445,10 +445,9 @@ contract DaofinPlugin is BaseDaofinPlugin {
         ) = getProposal(_proposalId);
 
         // Verify that the proposal has not been executed or expired.
-        if (!open && executed) {
-            return false;
-        }
-        // if (getBlockSnapshot() <= creationSnapshotBlock) revert WrongOperation();
+        if (open) return false;
+
+        if (getBlockSnapshot() <= creationSnapshotBlock) revert WrongOperation();
         if (!isMinParticipationReached(_proposalId)) return false;
         if (!isThresholdReached(_proposalId)) return false;
         if (block.number <= executionBlockDelay) return false;
@@ -755,7 +754,9 @@ contract DaofinPlugin is BaseDaofinPlugin {
         bool isValid = false;
         for (uint i = 0; i < committees.length; i++) {
             bytes32 committee = committees[i];
-            uint256 totalVotes = proposal_.committeeToTallyDetails[committee].yes;
+            uint256 yesVotes = proposal_.committeeToTallyDetails[committee].yes;
+            uint256 noVotes = proposal_.committeeToTallyDetails[committee].no;
+            uint256 abstainVotes = proposal_.committeeToTallyDetails[committee].abstain;
 
             uint256 supportThreshold = getCommitteesToVotingSettings(
                 proposal_.proposalTypeId,
@@ -763,9 +764,10 @@ contract DaofinPlugin is BaseDaofinPlugin {
             ).supportThreshold;
 
             isValid =
-                totalVotes >=
+                yesVotes >=
                 _applyRatioCeiled(getTotalNumberOfMembersByCommittee(committee), supportThreshold);
             if (!isValid) return false;
+            if (yesVotes < noVotes || yesVotes < abstainVotes) return false;
         }
         return true;
     }
