@@ -61,9 +61,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     ratio = await RatioTest.deploy();
 
     xdcValidatorMock = await deployXDCValidator(Alice);
-
-    await xdcValidatorMock.addCandidate(Bob.address);
-    await xdcValidatorMock.addCandidate(Mike.address);
   });
 
   beforeEach(async () => {

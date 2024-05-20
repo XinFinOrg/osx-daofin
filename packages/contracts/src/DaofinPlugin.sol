@@ -132,13 +132,13 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // 5 = proposalCosts - Proposal Costs
         _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
 
-        _addJudiciaryMember(judiciaries_);
-
         // set up minimum house deposit amount
         _settings.houseMinAmount = allowedAmount_;
 
         // Assign memory to storage
         _daofinGlobalSettings = _settings;
+
+        _addJudiciaryMember(judiciaries_);
     }
 
     function createProposal(
@@ -320,7 +320,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // sender must not be part of Juries
         if (isJudiciaryMember(_member)) revert InValidAddress();
         // sender must not be part of MN community
-        if (getGlobalSettings().xdcValidator.isCandidate(_member)) revert InValidAddress();
+        if (isXDCValidatorCandidate(_member)) revert InValidAddress();
 
         // A flag means the position gets activated
         _voterToLockedAmounts[_member].isActive = true;
@@ -535,8 +535,11 @@ contract DaofinPlugin is BaseDaofinPlugin {
             if (isJudiciaryMember(_members[i])) revert JudiciaryExist();
             if (isMasterNodeDelegatee(_members[i])) revert InValidAddress();
             if (isPeopleHouse(_members[i])) revert InValidAddress();
+            if (isXDCValidatorCandidate(_members[i])) revert InValidAddress();
+
             _judiciaryCommitteeCount++;
             _judiciaryCommittee[_members[i]] = true;
+
             emit JudiciaryChanged(_members[i], 0);
         }
     }
@@ -585,10 +588,10 @@ contract DaofinPlugin is BaseDaofinPlugin {
         if (masterNode == delegatee_) revert SameAddress();
 
         // register if it is a candidate
-        if (!getGlobalSettings().xdcValidator.isCandidate(masterNode)) revert IsNotCandidate();
+        if (!isXDCValidatorCandidate(masterNode)) revert IsNotCandidate();
 
         // delegatee must not be a candidate
-        if (getGlobalSettings().xdcValidator.isCandidate(delegatee_)) revert InValidAddress();
+        if (isXDCValidatorCandidate(delegatee_)) revert InValidAddress();
 
         // Delegatee/Master Node must not be a jury
         if (isJudiciaryMember(delegatee_)) revert InValidAddress();
@@ -673,13 +676,17 @@ contract DaofinPlugin is BaseDaofinPlugin {
         emit ProposalMetadataUpdated(_proposalId, _metadata);
     }
 
+    function isXDCValidatorCandidate(address masterNode_) private view returns (bool isValid) {
+        return getGlobalSettings().xdcValidator.isCandidate(masterNode_);
+    }
+
     function isMasterNodeDelegatee(address delegatee_) public view returns (bool isValid) {
         if (delegatee_ == address(0)) return false;
 
         address masterNode = _masterNodeDelegatee.delegateeToMasterNode[delegatee_];
         if (masterNode == address(0)) return false;
 
-        if (!getGlobalSettings().xdcValidator.isCandidate(masterNode)) return false;
+        if (!isXDCValidatorCandidate(masterNode)) return false;
 
         return true;
     }
@@ -778,7 +785,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
     }
 
     function getXDCTotalSupply() public pure returns (uint256) {
-        return 37705012699 ether;
+        return 37705012699;
     }
 
     function getTotalNumberOfJudiciary() public view returns (uint256) {

@@ -15,6 +15,7 @@ import {
 } from '../../helpers/utils';
 import {
   ADDRESS_ONE,
+  ADDRESS_TWO,
   ADDRESS_ZERO,
   JudiciaryCommittee,
   MasterNodeCommittee,
@@ -61,9 +62,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     ratio = await RatioTest.deploy();
 
     xdcValidatorMock = await deployXDCValidator(Alice);
-
-    await xdcValidatorMock.addCandidate(Bob.address);
-    await xdcValidatorMock.addCandidate(Mike.address);
   });
 
   beforeEach(async () => {
@@ -118,7 +116,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         BigNumber.from(now + 60 * 60 * 24 * 3),
         BigNumber.from(now + 60 * 60 * 24 * 5),
       ],
-      [Bob.address],
+      [Alice.address],
       parseEther('1'),
     ];
     await daofinPlugin.initialize(...initializeParams);
@@ -168,9 +166,10 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
       );
       await expect(
-        daofinPlugin
-          .connect(daoTreasury)
-          .addJudiciaryMembers([Bob.address, Mike.address])
+        daofinPlugin.connect(daoTreasury).addJudiciaryMembers([Mike.address])
+      ).not.reverted;
+      await expect(
+        daofinPlugin.connect(daoTreasury).addJudiciaryMembers([Mike.address])
       ).reverted;
     });
     it('must bump the counter', async () => {
