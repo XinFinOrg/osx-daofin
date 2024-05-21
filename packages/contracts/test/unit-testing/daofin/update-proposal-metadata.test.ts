@@ -122,6 +122,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
         BigNumber.from(now + 60 * 60 * 24 * 5),
+        BigNumber.from(now + 60 * 60 * 24 * 10),
+        BigNumber.from(now + 60 * 60 * 24 * 12),
       ],
       [Bob.address],
       '1',
@@ -131,7 +133,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     await daofinPlugin.joinHouse({value: parseEther('1')});
   });
   describe('Modify Proposal Metadata', async () => {
-    it('Modify proposal', async () => {
+    it('must not revert if it is before starting period', async () => {
       createPropsalParams = createProposalParams(
         '0x00',
         [],
@@ -153,12 +155,12 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       );
       await proposalTx.wait();
 
-      await expect(daofinPlugin.editProposalMetadata(proposalId, '0x01')).to
+      await expect(daofinPlugin.editProposalMetadata(proposalId, '0x01')).to.not
         .reverted;
 
       await advanceTime(ethers, convertDaysToSeconds(4));
 
-      await expect(daofinPlugin.editProposalMetadata(proposalId, '0x01')).to.not
+      await expect(daofinPlugin.editProposalMetadata(proposalId, '0x01')).to
         .reverted;
 
       const proposal = await daofinPlugin._proposals(proposalId);

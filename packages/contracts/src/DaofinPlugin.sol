@@ -662,10 +662,10 @@ contract DaofinPlugin is BaseDaofinPlugin {
     }
 
     function editProposalMetadata(uint256 _proposalId, bytes calldata _metadata) external {
-        (bool open, , address proposer, , , ) = getProposal(_proposalId);
+        (bool open, bool executed, address proposer, , , ) = getProposal(_proposalId);
 
         // Proposal must be before election its attached election period.
-        if (!open) revert InValidTime();
+        if (open || executed) revert InValidTime();
 
         // Only proposer address is able to modify metadata.
         if (proposer != _msgSender()) revert InValidAddress();
