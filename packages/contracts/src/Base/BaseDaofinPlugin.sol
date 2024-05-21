@@ -144,11 +144,7 @@ abstract contract BaseDaofinPlugin is
         override(ERC165Upgradeable, PluginUUPSUpgradeable, ProposalUpgradeable)
         returns (bool)
     {
-        return
-            interfaceId == type(ERC165Upgradeable).interfaceId ||
-            interfaceId == type(PluginUUPSUpgradeable).interfaceId ||
-            interfaceId == type(ProposalUpgradeable).interfaceId ||
-            super.supportsInterface(interfaceId);
+        return super.supportsInterface(interfaceId);
     }
 
     /// @notice This empty reserved space is put in place to allow future versions to add new variables without shifting down storage in the inheritance chain (see [OpenZeppelin's guide about storage gaps](https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps)).

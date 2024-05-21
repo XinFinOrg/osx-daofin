@@ -98,7 +98,7 @@ contract DaofinPluginSetup is PluginSetup {
             where: plugin,
             who: _dao,
             condition: PermissionLib.NO_CONDITION,
-            permissionId: daofinPluginBase.UPDATE_PROPOSAL_COSTS_PERMISSION()
+            permissionId: daofinPluginBase.UPDATE_ELECTION_PERIOD_PERMISSION()
         });
         permissions[5] = PermissionLib.MultiTargetPermission({
             operation: PermissionLib.Operation.Grant,
