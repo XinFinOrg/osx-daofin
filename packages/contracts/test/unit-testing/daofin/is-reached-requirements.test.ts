@@ -45,6 +45,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let Beny: SignerWithAddress;
   let Tony: SignerWithAddress;
   let Proposer: SignerWithAddress;
+  let Ammy: SignerWithAddress;
+  let Alpha: SignerWithAddress;
   let xdcValidatorMock: XDCValidator;
   let ratio: RatioTest;
   let MockTimestampOracle: MockTimestampOracle__factory;
@@ -58,6 +60,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     Beny = signers[4];
     Tony = signers[5];
     Proposer = signers[6];
+    Ammy = signers[7];
+    Alpha = signers[8];
 
     dao = await deployTestDao(Alice);
 
@@ -66,19 +70,19 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     const RatioTest = new RatioTest__factory(Alice);
     ratio = await RatioTest.deploy();
 
-    xdcValidatorMock = await deployXDCValidator(Alice);
-
-    await xdcValidatorMock.addCandidate(Bob.address);
-    await xdcValidatorMock.addCandidate(Mike.address);
-
     MockTimestampOracle = new MockTimestampOracle__factory(Alice);
     mockTimestampOracle = await MockTimestampOracle.deploy();
+
+    xdcValidatorMock = await deployXDCValidator(Alice);
+
+    await xdcValidatorMock.addCandidate(Mike.address);
+    await xdcValidatorMock.addCandidate(Tony.address);
   });
   let proposalId: BigNumber;
   let electionIndex = BigNumber.from('0');
   beforeEach(async () => {
     daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
-    const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); //Math.floor(Date.now() / 1000);
+    const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); // Math.floor(Date.now() / 1000);
 
     initializeParams = [
       dao.address,
@@ -127,13 +131,14 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         BigNumber.from(now + 60 * 60 * 24 * 7),
         BigNumber.from(now + 60 * 60 * 24 * 9),
       ],
-      [Bob.address],
+      [Bob.address, Ammy.address],
       '1',
     ];
 
     (await daofinPlugin.initialize(...initializeParams)).wait();
 
     await daofinPlugin.connect(Alice).joinHouse({value: parseEther('1')});
+    await daofinPlugin.connect(Alpha).joinHouse({value: parseEther('1')});
 
     createPropsalParams = createProposalParams(
       '0x00',
@@ -156,26 +161,26 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     );
     await proposalTx.wait();
 
-    await advanceTime(ethers, convertDaysToSeconds(2));
-
-    await xdcValidatorMock.addCandidate(Mike.address);
     await daofinPlugin
       .connect(Mike)
       .updateOrJoinMasterNodeDelegatee(Beny.address);
 
-    await daofinPlugin.connect(Alice).joinHouse({value: parseEther('1')});
+    await daofinPlugin
+      .connect(Tony)
+      .updateOrJoinMasterNodeDelegatee(Proposer.address);
+
+    await advanceTime(ethers, convertDaysToSeconds(2));
+
+    // await daofinPlugin.connect(Alice).joinHouse({value: parseEther('1')});
   });
   describe('IsReachedMinimumParticipation', async () => {
-    const juries = [Bob];
-    const mns = [Mike];
-    const mnDelegatees = [Beny];
-    const house = [Alice];
     it('must be greater that equal to quorum', async () => {
       const isReached = await daofinPlugin.isMinParticipationReached(
         proposalId
       );
 
       expect(isReached).to.be.false;
+
       await daofinPlugin.connect(Bob).vote(proposalId, '1', false);
       await daofinPlugin.connect(Beny).vote(proposalId, '2', false);
       await daofinPlugin.connect(Alice).vote(proposalId, '3', false);
@@ -268,8 +273,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await daofinPlugin.connect(Beny).vote(proposalId, '2', false);
       await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
 
-      await mineBlocksForExecutionDelay(ethers, daofinPlugin);
-
+      await advanceTime(ethers, convertDaysToSeconds(4));
       const canExecute = await daofinPlugin.canExecute(proposalId);
 
       expect(canExecute).to.be.true;
@@ -278,12 +282,14 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
       await daofinPlugin.connect(Beny).vote(proposalId, '2', false);
       await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
+      await daofinPlugin.connect(Ammy).vote(proposalId, '1', false);
+      await daofinPlugin.connect(Alpha).vote(proposalId, '1', false);
+      await daofinPlugin.connect(Proposer).vote(proposalId, '1', false);
 
       // ignore block delay
       // await mineBlocksForExecutionDelay(ethers, daofinPlugin);
 
       const canExecute = await daofinPlugin.canExecute(proposalId);
-
       expect(canExecute).to.be.false;
     });
   });
