@@ -262,7 +262,6 @@ export function handleProposalTypeCreated(event: ProposalTypeCreated): void {
     );
     setting.name = item.name;
     setting.minParticipation = item.minParticipation;
-    setting.minVotingPower = item.minVotingPower;
     setting.supportThreshold = item.supportThreshold;
     setting.proposalType = subgraphId;
 
