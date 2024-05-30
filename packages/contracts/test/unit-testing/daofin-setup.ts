@@ -23,6 +23,7 @@ import {
   abiCoder,
   UPDATE_ELECTION_PERIOD_PERMISSION_ID,
   MODIFY_PROPOSAL_TYPE_PERMISSION_ID,
+  XdcValidator,
 } from './daofin-common';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
 import {expect} from 'chai';
@@ -54,7 +55,7 @@ describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
     initializeParams = [
       dao.address,
       parseEther('1'),
-      ADDRESS_ZERO,
+      XdcValidator,
       [
         createCommitteeVotingSettings(MasterNodeCommittee, '0', '0', '1'),
         createCommitteeVotingSettings(PeoplesHouseCommittee, '0', '0', '1'),
@@ -104,13 +105,13 @@ describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
           initData
         );
       const allPermissions = [
-        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
-        UPDATE_ELECTION_PERIOD_PERMISSION_ID,
         UPDATE_MIN_HOUSE_AMOUNT_PERMISSION_ID,
-        EXECUTE_PERMISSION_ID,
+        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
         CREATE_PROPOSAL_TYPE_PERMISSION_ID,
         UPDATE_PROPOSAL_COSTS_PERMISSION_ID,
+        UPDATE_ELECTION_PERIOD_PERMISSION_ID,
         MODIFY_PROPOSAL_TYPE_PERMISSION_ID,
+        EXECUTE_PERMISSION_ID,
       ];
       expect(preparedData.preparedSetupData.permissions.length).be.eq(
         allPermissions.length
@@ -164,12 +165,13 @@ describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
           initData
         );
       const allPermissions = [
-        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
-        UPDATE_ELECTION_PERIOD_PERMISSION_ID,
         UPDATE_MIN_HOUSE_AMOUNT_PERMISSION_ID,
-        EXECUTE_PERMISSION_ID,
+        UPDATE_ELECTION_PERIOD_PERMISSION_ID,
+        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
         CREATE_PROPOSAL_TYPE_PERMISSION_ID,
         UPDATE_PROPOSAL_COSTS_PERMISSION_ID,
+        MODIFY_PROPOSAL_TYPE_PERMISSION_ID,
+        EXECUTE_PERMISSION_ID,
       ];
 
       expect(preparedData.preparedSetupData.permissions.length).be.eq(

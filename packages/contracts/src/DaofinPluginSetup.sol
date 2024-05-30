@@ -183,8 +183,6 @@ contract DaofinPluginSetup is PluginSetup {
             PermissionLib.NO_CONDITION,
             DAO(payable(_dao)).EXECUTE_PERMISSION_ID()
         );
-
-        permissions = permissions;
     }
 
     /// @inheritdoc IPluginSetup

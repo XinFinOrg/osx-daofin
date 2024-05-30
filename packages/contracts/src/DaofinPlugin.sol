@@ -183,7 +183,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // Checks the proposer address
         // if a valid voter comes, stores vote info,
         // otherwise reverts.
-        _updateVote(_proposalType, _proposalId, proposer, _voteOption);
+        _updateVote(_proposalId, proposer, _voteOption);
     }
 
     function _createProposal(
@@ -211,7 +211,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
         proposal_.startDate = _startDate;
         proposal_.endDate = _endDate;
         proposal_.metadata = _metadata;
-        proposal_.snapshotBlock = getBlockSnapshot().toUint64();
 
         // Reduce costs
         if (_allowFailureMap != 0) {
@@ -226,12 +225,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         }
     }
 
-    function _updateVote(
-        uint256 proposalTypeId_,
-        uint256 proposalId_,
-        address voter_,
-        VoteOption voteOption_
-    ) private {
+    function _updateVote(uint256 proposalId_, address voter_, VoteOption voteOption_) private {
         // It does not store any vote information
         // if the voteOption is NONE
         if (voteOption_ == VoteOption.None) return;
@@ -271,7 +265,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         address voter = _msgSender();
 
         // retrieve proposal Object
-        (bool open, , , uint256 proposalTypeId, , ) = getProposal(_proposalId);
+        (bool open, , , ) = getProposal(_proposalId);
 
         // check if is not open, revert()
         if (!open) revert InValidDate();
@@ -279,13 +273,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // A voter must not vote on a proposal twice
         if (isVotedOnProposal(voter, _proposalId)) revert VotedAlready();
 
-        _updateVote(proposalTypeId, _proposalId, voter, _voteOption);
-
-        if (isMinParticipationReached(_proposalId) && isThresholdReached(_proposalId)) {
-            _proposals[_proposalId].executionBlockDelay =
-                getBlockSnapshot().toUint64() +
-                EXECUTION_DELAY_BLOCK;
-        }
+        _updateVote(_proposalId, voter, _voteOption);
     }
 
     function execute(uint256 _proposalId) external {
@@ -407,18 +395,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
     function getProposal(
         uint256 _proposalId
-    )
-        public
-        view
-        returns (
-            bool open,
-            bool executed,
-            address proposer,
-            uint256 proposalTypeId,
-            uint64 snapshotBlock,
-            uint64 executionBlockDelay
-        )
-    {
+    ) public view returns (bool open, bool executed, address proposer, uint256 proposalTypeId) {
         open = _isProposalOpen(
             _proposals[_proposalId].startDate,
             _proposals[_proposalId].endDate,
@@ -428,29 +405,20 @@ contract DaofinPlugin is BaseDaofinPlugin {
             open,
             _proposals[_proposalId].executed,
             _proposals[_proposalId].proposer,
-            _proposals[_proposalId].proposalTypeId,
-            _proposals[_proposalId].snapshotBlock,
-            _proposals[_proposalId].executionBlockDelay
+            _proposals[_proposalId].proposalTypeId
         );
     }
 
     function _canExecute(uint256 _proposalId) private view returns (bool isValid) {
-        (
-            bool open,
-            bool executed,
-            ,
-            ,
-            uint64 creationSnapshotBlock,
-            uint64 executionBlockDelay
-        ) = getProposal(_proposalId);
+        (, bool executed, , ) = getProposal(_proposalId);
 
-        // Verify that the proposal has not been executed or expired.
-        if (open) return false;
+        // Verify that the proposal has not been executed and must be after election end date.
+        if (executed || block.timestamp <= _proposals[_proposalId].endDate) return false;
 
-        if (getBlockSnapshot() <= creationSnapshotBlock) revert WrongOperation();
         if (!isMinParticipationReached(_proposalId)) return false;
         if (!isThresholdReached(_proposalId)) return false;
-        if (block.number <= executionBlockDelay) return false;
+        if (_proposals[_proposalId].endDate + EXECUTION_DELAY_BLOCK >= block.timestamp)
+            return false;
         return true;
     }
 
@@ -662,7 +630,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
     }
 
     function editProposalMetadata(uint256 _proposalId, bytes calldata _metadata) external {
-        (bool open, bool executed, address proposer, , , ) = getProposal(_proposalId);
+        (bool open, bool executed, address proposer, ) = getProposal(_proposalId);
 
         // Proposal must be before election its attached election period.
         if (open || executed) revert InValidTime();

@@ -1,4 +1,4 @@
-import DaoData from '../../dao-initial-data-internal-demo.json';
+import DaoData from '../../dao-initial-data.json';
 import {DaofinPluginSetupParams} from '../../plugin-settings';
 import {ADDRESS_ZERO} from '../../test/unit-testing/daofin-common';
 import {
@@ -67,19 +67,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         MasterNodeCommittee,
         daoParams.masterNodeVotingSettings.supportThreshold,
         daoParams.masterNodeVotingSettings.minParticipation,
-        daoParams.masterNodeVotingSettings.minVotingPower,
       ],
       [
         PeoplesHouseCommittee,
         daoParams.peoplesHouseVotingSettings.supportThreshold,
         daoParams.peoplesHouseVotingSettings.minParticipation,
-        daoParams.peoplesHouseVotingSettings.minVotingPower,
       ],
       [
         JudiciaryCommittee,
         daoParams.judiciaryVotingSettings.supportThreshold,
         daoParams.judiciaryVotingSettings.minParticipation,
-        daoParams.judiciaryVotingSettings.minVotingPower,
       ],
     ],
     [
@@ -87,26 +84,21 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
         MasterNodeCommittee,
         daoParams.masterNodeVotingSettings.supportThreshold,
         daoParams.masterNodeVotingSettings.minParticipation,
-        daoParams.masterNodeVotingSettings.minVotingPower,
       ],
       [
         PeoplesHouseCommittee,
         daoParams.peoplesHouseVotingSettings.supportThreshold,
         daoParams.peoplesHouseVotingSettings.minParticipation,
-        daoParams.peoplesHouseVotingSettings.minVotingPower,
       ],
       [
         JudiciaryCommittee,
         daoParams.judiciaryVotingSettings.supportThreshold,
         daoParams.judiciaryVotingSettings.minParticipation,
-        daoParams.judiciaryVotingSettings.minVotingPower,
       ],
     ],
     [
       // 1st
-      BigNumber.from(
-        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 3
-      ),
+      BigNumber.from(Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24),
       BigNumber.from(
         Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 5
       ),
@@ -124,11 +116,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       BigNumber.from(
         Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 9
       ),
-      // 3rd
+      // 4th
       BigNumber.from(
         Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 9
       ),
-      // 4th
       BigNumber.from(
         Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 11
       ),
@@ -136,7 +127,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       BigNumber.from(
         Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 13
       ),
-      // 6th
       BigNumber.from(
         Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 15
       ),
@@ -197,11 +187,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const daoBaseAddr = await daoFactoryInstance.daoBase();
   // simulates each plugin installation seperately to get the requested permissions
   for (const installData of pluginInstallationData) {
+    console.log({installData});
+
     const pluginSetupProcessorResponse =
       await pluginSetupProcessor.callStatic.prepareInstallation(
         daoBaseAddr,
         installData
       );
+    console.log({pluginSetupProcessorResponse});
+
     const found = pluginSetupProcessorResponse[1].permissions.find(
       permission =>
         permission.permissionId === PermissionIds.EXECUTE_PERMISSION_ID
@@ -216,6 +210,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   if (!execPermissionFound) {
     throw new Error();
   }
+  console.log(2);
 
   const tx = await daoFactoryInstance.connect(deployer).createDao(
     {
@@ -226,6 +221,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     },
     pluginInstallationData
   );
+  console.log(3);
   console.log({
     key: 'CREATING',
     txHash: tx.hash,

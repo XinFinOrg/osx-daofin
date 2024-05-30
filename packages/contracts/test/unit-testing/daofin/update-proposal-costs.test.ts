@@ -63,7 +63,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
     xdcValidatorMock = await deployXDCValidator(Alice);
 
-    await xdcValidatorMock.addCandidate(Bob.address);
     await xdcValidatorMock.addCandidate(Mike.address);
   });
 
