@@ -69,7 +69,6 @@ abstract contract BaseDaofinPlugin is
         uint256 allowFailureMap;
         uint64 startDate;
         uint64 endDate;
-        uint64 snapshotBlock;
         bytes metadata;
         address[] voters;
         IDAO.Action[] actions;
