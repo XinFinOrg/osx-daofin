@@ -468,18 +468,15 @@ contract DaofinPlugin is BaseDaofinPlugin {
         CommitteeVotingSettings[] memory _committeesVotingSettings
     ) private returns (uint256) {
         require(_committeesVotingSettings.length == 3, "invalid settings length");
-        ///
+
+        if (_committeesVotingSettings[0].name != MasterNodeCommittee) revert InValidCommittee();
+        if (_committeesVotingSettings[1].name != PeoplesHouseCommittee) revert InValidCommittee();
+        if (_committeesVotingSettings[2].name != JudiciaryCommittee) revert InValidCommittee();
+
         // Assigning committees to the right variables
         for (uint256 i = 0; i < _committeesVotingSettings.length; i++) {
             bytes32 committeeName = _committeesVotingSettings[i].name;
             if (committeeName == bytes32(0)) revert InValidCommittee();
-            if (
-                !(committeeName == MasterNodeCommittee ||
-                    committeeName == PeoplesHouseCommittee ||
-                    committeeName == JudiciaryCommittee)
-            ) {
-                revert InValidCommittee();
-            }
             _proposalTypesToCommiteesVotingSettings[_proposalTypeId][
                 committeeName
             ] = _committeesVotingSettings[i];

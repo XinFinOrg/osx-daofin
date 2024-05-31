@@ -161,6 +161,30 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       expect(before.add(1)).eq(after);
     });
+    it('must revert due to un-ordered committee settings list', async () => {
+      await expect(
+        daofinPlugin.createProposalType([
+          createCommitteeVotingSettings(
+            PeoplesHouseCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+          createCommitteeVotingSettings(
+            MasterNodeCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+          createCommitteeVotingSettings(
+            JudiciaryCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+        ])
+      ).to.reverted;
+    });
     it('create Proposal Type', async () => {
       const before = await daofinPlugin.proposalTypeCount();
       await expect(
