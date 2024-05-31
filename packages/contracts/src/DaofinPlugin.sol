@@ -731,7 +731,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
             bytes32 committee = committees[i];
             uint256 yesVotes = proposal_.committeeToTallyDetails[committee].yes;
             uint256 noVotes = proposal_.committeeToTallyDetails[committee].no;
-            uint256 abstainVotes = proposal_.committeeToTallyDetails[committee].abstain;
 
             uint256 supportThreshold = getCommitteesToVotingSettings(
                 proposal_.proposalTypeId,
@@ -742,7 +741,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
                 yesVotes >=
                 _applyRatioCeiled(getTotalNumberOfMembersByCommittee(committee), supportThreshold);
             if (!isValid) return false;
-            if (yesVotes < noVotes || yesVotes < abstainVotes) return false;
+            if (yesVotes < noVotes) return false;
         }
         return true;
     }
