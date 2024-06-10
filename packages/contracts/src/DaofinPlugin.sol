@@ -147,7 +147,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         uint256 _electionPeriodIndex,
         uint256 _proposalType,
         uint256 _allowFailureMap,
-        VoteOption _voteOption
+        VoteOption
     ) external payable returns (uint256 _proposalId) {
         // Cache msg.sender
         address proposer = _msgSender();
@@ -179,11 +179,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // Map proposal ID to PropsalType ID
         _proposals[_proposalId].proposalTypeId = _proposalType;
         emit ProposalIdToProposalTypeIdAttached(_proposalId, _proposalType);
-
-        // Checks the proposer address
-        // if a valid voter comes, stores vote info,
-        // otherwise reverts.
-        _updateVote(_proposalId, proposer, _voteOption);
     }
 
     function _createProposal(
@@ -239,7 +234,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         TallyDatails memory td = getProposalTallyDetails(proposalId_, committee);
 
         uint256 votingPower = 1;
-
+        td.name = committee;
         // Exception for House
         if (committee == PeoplesHouseCommittee) {
             votingPower = _voterToLockedAmounts[voter_].amount / (10 ** 18);
@@ -450,7 +445,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
             _createProposalTypeId(),
             _committeesVotingSettings
         );
-        emit ProposalTypeCreated(proposalTypeId, _committeesVotingSettings);
     }
 
     function modifyProposalType(
@@ -460,7 +454,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
         require(proposalTypeCount() > _proposalTypeId, "Invalid PT");
 
         proposalTypeId = _createOrModifyProposalType(_proposalTypeId, _committeesVotingSettings);
-        emit ProposalTypeCreated(proposalTypeId, _committeesVotingSettings);
     }
 
     function _createOrModifyProposalType(
@@ -481,6 +474,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
                 committeeName
             ] = _committeesVotingSettings[i];
         }
+        emit ProposalTypeCreated(_proposalTypeId, _committeesVotingSettings);
         return _proposalTypeId;
     }
 
@@ -630,7 +624,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         (, bool executed, address proposer, ) = getProposal(_proposalId);
 
         // Proposal must be before election its attached election period.
-        if (block.timestamp > _proposals[_proposalId].startDate || executed) revert InValidTime();
+        if (block.timestamp > _proposals[_proposalId].startDate) revert InValidTime();
 
         // Only proposer address is able to modify metadata.
         if (proposer != _msgSender()) revert InValidAddress();
@@ -738,7 +732,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
                 yesVotes >=
                 _applyRatioCeiled(getTotalNumberOfMembersByCommittee(committee), supportThreshold);
             if (!isValid) return false;
-            if (yesVotes < noVotes) return false;
+            if (noVotes != 0 && noVotes >= yesVotes) return false;
         }
         return true;
     }

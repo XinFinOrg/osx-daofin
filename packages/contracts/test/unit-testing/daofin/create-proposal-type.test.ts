@@ -2,6 +2,8 @@ import {DaofinPluginSetupParams} from '../../../plugin-settings';
 import {
   DaofinPlugin,
   DaofinPlugin__factory,
+  MockTimestampOracle,
+  MockTimestampOracle__factory,
   XDCValidator,
 } from '../../../typechain';
 import {deployWithProxy} from '../../../utils/helpers';
@@ -47,6 +49,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let Beny: SignerWithAddress;
   let xdcValidatorMock: XDCValidator;
   let ratio: RatioTest;
+  let MockTimestampOracle: MockTimestampOracle__factory;
+  let mockTimestampOracle: MockTimestampOracle;
   before(async () => {
     signers = await ethers.getSigners();
     Alice = signers[0];
@@ -63,11 +67,13 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     ratio = await RatioTest.deploy();
 
     xdcValidatorMock = await deployXDCValidator(Alice);
+    MockTimestampOracle = new MockTimestampOracle__factory(Alice);
+    mockTimestampOracle = await MockTimestampOracle.deploy();
   });
 
   beforeEach(async () => {
     daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
-    const now = Math.floor(new Date().getTime() / 1000);
+    const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); //Math.floor(Date.now() / 1000);
 
     initializeParams = [
       dao.address,
@@ -158,7 +164,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         ])
       ).to.not.reverted;
       const after = await daofinPlugin.proposalTypeCount();
-
       expect(before.add(1)).eq(after);
     });
     it('must revert due to un-ordered committee settings list', async () => {

@@ -207,7 +207,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
           createCommitteeVotingSettings(PeoplesHouseCommittee, '0', '0', '1'),
           createCommitteeVotingSettings(
             JudiciaryCommittee,
-            '200000',
+            '500000',
             '400000',
             '1'
           ),
@@ -274,7 +274,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
 
-      await expect(daofinPlugin.execute(proposalId)).to.reverted;
+      await expect(daofinPlugin.execute(proposalId)).reverted;
 
       await daofinPlugin.connect(John).vote(proposalId, '2', false);
       await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
@@ -282,7 +282,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       await advanceTime(ethers, convertDaysToSeconds(4));
 
-      await expect(daofinPlugin.execute(proposalId)).not.be.reverted;
+      await expect(daofinPlugin.execute(proposalId)).not.reverted;
     });
     it('must not be able to execute due to lack of YES votes', async () => {
       await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
@@ -294,7 +294,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       await advanceTime(ethers, convertDaysToSeconds(4));
 
-      await expect(daofinPlugin.execute(proposalId)).to.reverted;
+      await expect(daofinPlugin.execute(proposalId)).reverted;
     });
   });
   describe('Execute only for Senate', async () => {
@@ -393,17 +393,17 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       await advanceTime(ethers, convertDaysToSeconds(4));
 
-      await expect(daofinPlugin.execute(proposalId)).not.be.reverted;
+      await expect(daofinPlugin.execute(proposalId)).not.reverted;
     });
     it('must not be able to execute due to lack of YES votes', async () => {
       await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
 
-      await daofinPlugin.connect(Tony).vote(proposalId, '2', false);
-      await daofinPlugin.connect(John).vote(proposalId, '1', false);
+      await daofinPlugin.connect(Tony).vote(proposalId, '1', false);
+      await daofinPlugin.connect(John).vote(proposalId, '3', false);
 
       await advanceTime(ethers, convertDaysToSeconds(4));
 
-      await expect(daofinPlugin.execute(proposalId)).not.be.reverted;
+      await expect(daofinPlugin.execute(proposalId)).reverted;
     });
   });
 });
