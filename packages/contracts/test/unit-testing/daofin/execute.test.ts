@@ -16,6 +16,7 @@ import {
   createCommitteeVotingSettings,
   createProposalParams,
   mineBlocksForExecutionDelay,
+  onlyJuryCommitteeVotingSettings,
 } from '../../helpers/utils';
 import {
   EXECUTE_PERMISSION_ID,
@@ -117,6 +118,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
             parseEther('1')
           ),
         ],
+        onlyJuryCommitteeVotingSettings(),
         [
           BigNumber.from(now + 60 * 60 * 24 * 1),
           BigNumber.from(now + 60 * 60 * 24 * 3),
@@ -232,6 +234,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
             parseEther('1')
           ),
         ],
+        onlyJuryCommitteeVotingSettings(),
         [
           BigNumber.from(now + 60 * 60 * 24 * 1),
           BigNumber.from(now + 60 * 60 * 24 * 3),
@@ -337,6 +340,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
             parseEther('1')
           ),
         ],
+        onlyJuryCommitteeVotingSettings(),
         [
           BigNumber.from(now + 60 * 60 * 24 * 1),
           BigNumber.from(now + 60 * 60 * 24 * 3),

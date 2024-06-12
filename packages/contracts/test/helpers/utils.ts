@@ -7,7 +7,9 @@ import {PromiseOrValue} from '../../typechain/common';
 import {HardhatEthersHelpers} from '@nomiclabs/hardhat-ethers/types';
 import {IDAO} from '@xinfin/osx-ethers';
 import {BigNumber, BigNumberish, BytesLike} from 'ethers';
+import { parseEther } from 'ethers/lib/utils';
 import {ethers} from 'hardhat';
+import { JudiciaryCommittee, MasterNodeCommittee, PeoplesHouseCommittee } from '../unit-testing/daofin-common';
 
 export function createCommitteeVotingSettings(
   name: PromiseOrValue<BytesLike>,
@@ -20,6 +22,30 @@ export function createCommitteeVotingSettings(
     minParticipation: qourum,
     supportThreshold: threshold,
   };
+}
+
+export function onlyJuryCommitteeVotingSettings(
+): BaseDaofinPlugin.CommitteeVotingSettingsStruct[] {
+  return [
+    createCommitteeVotingSettings(
+      MasterNodeCommittee,
+      '100000',
+      '100000',
+      parseEther('1')
+    ),
+    createCommitteeVotingSettings(
+      PeoplesHouseCommittee,
+      '100000',
+      '100000',
+      parseEther('1')
+    ),
+    createCommitteeVotingSettings(
+      JudiciaryCommittee,
+      '100000',
+      '100000',
+      parseEther('1')
+    )
+  ]
 }
 
 export function createProposalParams(

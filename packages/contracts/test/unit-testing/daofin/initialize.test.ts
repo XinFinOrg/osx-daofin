@@ -9,7 +9,10 @@ import {deployWithProxy} from '../../../utils/helpers';
 import {deployTestDao} from '../../helpers/test-dao';
 import {deployXDCValidator} from '../../helpers/test-xdc-validator';
 import {PROPOSAL_EVENTS} from '../../helpers/types';
-import {createCommitteeVotingSettings} from '../../helpers/utils';
+import {
+  createCommitteeVotingSettings,
+  onlyJuryCommitteeVotingSettings,
+} from '../../helpers/utils';
 import {
   ADDRESS_ONE,
   ADDRESS_ZERO,
@@ -99,6 +102,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
             parseEther('1')
           ),
         ],
+        onlyJuryCommitteeVotingSettings(),
         [
           BigNumber.from(now + 60 * 60 * 24 * 3),
           BigNumber.from(now + 60 * 60 * 24 * 5),
@@ -130,14 +134,14 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await daofinPlugin.initialize(...initializeParams);
       const electionPeriods = await daofinPlugin.getElectionPeriods();
 
-      expect(electionPeriods.length).to.eq(initializeParams[5].length / 2);
+      expect(electionPeriods.length).to.eq(initializeParams[6].length / 2);
 
       electionPeriods.forEach(({startDate, endDate}, index) => {
         expect(startDate.toNumber()).to.be.eq(
-          +initializeParams[5][index].toString()
+          +initializeParams[6][index].toString()
         );
         expect(endDate.toNumber()).to.be.greaterThanOrEqual(
-          +initializeParams[5][index * 2].toString()
+          +initializeParams[6][index * 2].toString()
         );
       });
     });
@@ -196,7 +200,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     });
     it('judiciary members must be set', async () => {
       await daofinPlugin.initialize(...initializeParams);
-      for await (const judiciary of initializeParams[6]) {
+      for await (const judiciary of initializeParams[7]) {
         const exist = await daofinPlugin.isJudiciaryMember(judiciary);
         expect(exist).to.be.true;
         expect(judiciary).be.not.eq(ADDRESS_ZERO);
@@ -208,7 +212,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       const proposalCosts = await daofinPlugin.proposalCosts();
 
       expect(proposalCosts.toString()).not.be.greaterThan(
-        parseEther(initializeParams[7].toString())
+        parseEther(initializeParams[8].toString())
       );
     });
   });

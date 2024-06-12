@@ -97,6 +97,29 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       ],
     ],
     [
+      [
+        MasterNodeCommittee,
+        daoParams.onlyJuryVotingSettings.masterNodeVotingSettings
+          .supportThreshold,
+        daoParams.onlyJuryVotingSettings.masterNodeVotingSettings
+          .minParticipation,
+      ],
+      [
+        PeoplesHouseCommittee,
+        daoParams.onlyJuryVotingSettings.peoplesHouseVotingSettings
+          .supportThreshold,
+        daoParams.onlyJuryVotingSettings.peoplesHouseVotingSettings
+          .minParticipation,
+      ],
+      [
+        JudiciaryCommittee,
+        daoParams.onlyJuryVotingSettings.judiciaryVotingSettings
+          .supportThreshold,
+        daoParams.onlyJuryVotingSettings.judiciaryVotingSettings
+          .minParticipation,
+      ],
+    ],
+    [
       // 1st
       BigNumber.from(Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24),
       BigNumber.from(

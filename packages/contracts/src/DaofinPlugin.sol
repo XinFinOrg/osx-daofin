@@ -66,6 +66,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         address xdcValidatorContract_,
         CommitteeVotingSettings[] memory grantSettings_,
         CommitteeVotingSettings[] memory generalSettings_,
+        CommitteeVotingSettings[] memory onlyJuryCommitteeVotingSettings_,
         uint64[] memory electionPeriod_,
         address[] calldata judiciaries_,
         uint256 proposalCosts_
@@ -124,7 +125,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
 
         // 3 = proposalType - ElectionPeriods
-        _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
+        _createOrModifyProposalType(_createProposalTypeId(), onlyJuryCommitteeVotingSettings_);
 
         // 4 = proposalType - Judiciary Replacement
         _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);

@@ -27,6 +27,7 @@ contract DaofinPluginSetup is PluginSetup {
             address xdcValidator,
             BaseDaofinPlugin.CommitteeVotingSettings[] memory committeeVotingSettings,
             BaseDaofinPlugin.CommitteeVotingSettings[] memory generalCommitteeVotingSettings,
+            BaseDaofinPlugin.CommitteeVotingSettings[] memory onlyJuryCommitteeVotingSettings,
             uint64[] memory electionPeriods,
             address[] memory judiciaries,
             uint256 proposalCosts
@@ -35,6 +36,7 @@ contract DaofinPluginSetup is PluginSetup {
                 (
                     uint256,
                     address,
+                    BaseDaofinPlugin.CommitteeVotingSettings[],
                     BaseDaofinPlugin.CommitteeVotingSettings[],
                     BaseDaofinPlugin.CommitteeVotingSettings[],
                     uint64[],
@@ -52,6 +54,7 @@ contract DaofinPluginSetup is PluginSetup {
                 xdcValidator,
                 committeeVotingSettings,
                 generalCommitteeVotingSettings,
+                onlyJuryCommitteeVotingSettings,
                 electionPeriods,
                 judiciaries,
                 proposalCosts

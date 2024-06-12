@@ -14,6 +14,7 @@ import {
   convertDaysToSeconds,
   createCommitteeVotingSettings,
   createProposalParams,
+  onlyJuryCommitteeVotingSettings,
 } from '../../helpers/utils';
 import {
   ADDRESS_ONE,
@@ -119,6 +120,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
           parseEther('1')
         ),
       ],
+      onlyJuryCommitteeVotingSettings(),
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
         BigNumber.from(now + 60 * 60 * 24 * 5),
