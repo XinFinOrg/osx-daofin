@@ -532,6 +532,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
     function updateAllowedAmounts(
         uint256 _allowedAmount
     ) external auth(UPDATE_MIN_HOUSE_AMOUNT_PERMISSION) {
+        if (_allowedAmount < 1 ether) revert InValidAmount();
         _daofinGlobalSettings.houseMinAmount = _allowedAmount;
         emit HouseMinAmountUpdated(_allowedAmount);
     }
