@@ -565,6 +565,23 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
         emit MasterNodeDelegateeUpdated(masterNode, delegatee_);
     }
+    function syncWithXdcValidator(address masterNode_) external {
+        // only a Judiciary Member can call this function
+        if (!isJudiciaryMember(_msgSender())) revert InValidAddress();
+        // supplied addresses must not be zero
+        if (masterNode_ == address(0)) revert AddressIsZero();
+        address delegatee = _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
+
+        // if mn has already a non-zero delegatee, means mn has already registered.
+        // && if mn has resigned from xdcValidator
+        if (delegatee != address(0) && !isXDCValidatorCandidate(masterNode_)) {
+            if (isWithinElectionPeriod()) revert InValidTime();
+            delete _masterNodeDelegatee.delegateeToMasterNode[delegatee];
+            delete _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
+            _masterNodeDelegatee.numberOfJointMasterNodes--;
+        } else revert InValidAddress();
+        emit MasterNodeDelegateeUpdated(masterNode_, delegatee);
+    }
 
     function _createOrUpdateMasterNodeDelegatee(address masterNode_, address delegatee_) private {
         address _cachedMasterNode = _masterNodeDelegatee.delegateeToMasterNode[delegatee_];
