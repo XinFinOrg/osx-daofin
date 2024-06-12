@@ -87,7 +87,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
             uint64 _endDate = electionPeriod_[i + 1];
 
             if (_startDate > _endDate) revert InValidDate();
-
             _electionPeriods.push(ElectionPeriod(_startDate, _endDate));
 
             emit ElectionPeriodUpdated(_startDate, _endDate);
@@ -524,6 +523,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
             uint64 _startDate = _periods[i].startDate;
             uint64 _endDate = _periods[i].endDate;
             if (_startDate > _endDate) revert InValidDate();
+            if (_startDate + 1 weeks >= _endDate) revert InValidDate();
             _electionPeriods.push(ElectionPeriod(_startDate, _endDate));
             emit ElectionPeriodUpdated(_startDate, _endDate);
         }
@@ -622,10 +622,10 @@ contract DaofinPlugin is BaseDaofinPlugin {
     }
 
     function editProposalMetadata(uint256 _proposalId, bytes calldata _metadata) external {
-        (, bool executed, address proposer, ) = getProposal(_proposalId);
+        (, , address proposer, ) = getProposal(_proposalId);
 
         // Proposal must be before election its attached election period.
-        if (block.timestamp > _proposals[_proposalId].startDate) revert InValidTime();
+        if (block.timestamp >= _proposals[_proposalId].startDate) revert InValidTime();
 
         // Only proposer address is able to modify metadata.
         if (proposer != _msgSender()) revert InValidAddress();
