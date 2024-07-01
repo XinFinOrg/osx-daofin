@@ -778,7 +778,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         uint64 _now = block.timestamp.toUint64();
 
         for (uint i = 0; i < _electionPeriods.length; i++) {
-            if (_electionPeriods[i].startDate <= _now && _electionPeriods[i].endDate >= _now) {
+            if (_electionPeriods[i].startDate <= _now && _electionPeriods[i].endDate > _now) {
                 return true;
             }
         }
