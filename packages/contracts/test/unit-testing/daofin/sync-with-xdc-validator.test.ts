@@ -2,6 +2,8 @@ import {DaofinPluginSetupParams} from '../../../plugin-settings';
 import {
   DaofinPlugin,
   DaofinPlugin__factory,
+  MockTimestampOracle,
+  MockTimestampOracle__factory,
   XDCValidator,
 } from '../../../typechain';
 import {deployWithProxy} from '../../../utils/helpers';
@@ -21,6 +23,7 @@ import {
   MasterNodeCommittee,
   PeoplesHouseCommittee,
   UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
+  UPDATE_PROPOSAL_COSTS_PERMISSION_ID,
   XdcValidator,
 } from '../daofin-common';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
@@ -46,6 +49,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let Beny: SignerWithAddress;
   let xdcValidatorMock: XDCValidator;
   let ratio: RatioTest;
+  let MockTimestampOracle: MockTimestampOracle__factory;
+  let mockTimestampOracle: MockTimestampOracle;
   before(async () => {
     signers = await ethers.getSigners();
     Alice = signers[0];
@@ -61,12 +66,15 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     const RatioTest = new RatioTest__factory(Alice);
     ratio = await RatioTest.deploy();
 
+    MockTimestampOracle = new MockTimestampOracle__factory(Alice);
+    mockTimestampOracle = await MockTimestampOracle.deploy();
+
     xdcValidatorMock = await deployXDCValidator(Alice);
   });
 
   beforeEach(async () => {
     daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
-    const now = Math.floor(new Date().getTime() / 1000);
+    const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber();
 
     initializeParams = [
       dao.address,
@@ -116,95 +124,40 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
         BigNumber.from(now + 60 * 60 * 24 * 5),
+        BigNumber.from(now + 60 * 60 * 24 * 10),
+        BigNumber.from(now + 60 * 60 * 24 * 12),
       ],
       [Bob.address],
-      parseEther('1'),
+      '1',
     ];
     await daofinPlugin.initialize(...initializeParams);
+
+    await daofinPlugin.joinHouse({value: parseEther('1')});
   });
-  describe('Remove Jury', async () => {
-    it('Only DAO is allowed to change', async () => {
-      const daoTreasury = Alice;
+  describe('syncWithXdcValidator', async () => {
+    it('must revert if the caller is not part of Jury', async () => {
+      await xdcValidatorMock.addCandidate(John.address);
       await expect(
-        daofinPlugin.connect(daoTreasury).removeJudiciaryMember(Bob.address)
-      ).reverted;
-
-      await dao.grant(
-        daofinPlugin.address,
-        Alice.address,
-        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
-      );
-      await expect(
-        daofinPlugin.connect(daoTreasury).removeJudiciaryMember(Bob.address)
-      ).not.reverted;
-    });
-
-    it('must not accept zero address', async () => {
-      const daoTreasury = Alice;
-
-      await dao.grant(
-        daofinPlugin.address,
-        Alice.address,
-        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
-      );
-      await expect(
-        daofinPlugin.connect(daoTreasury).removeJudiciaryMember(ADDRESS_ZERO)
+        daofinPlugin.connect(Mike).syncWithXdcValidator(John.address)
       ).reverted;
     });
-
-    it('must revert for new address', async () => {
-      const daoTreasury = Alice;
-
-      await dao.grant(
-        daofinPlugin.address,
-        Alice.address,
-        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
-      );
-      await expect(
-        daofinPlugin.connect(daoTreasury).removeJudiciaryMember(Mike.address)
-      ).reverted;
-    });
-    it('must dump the counter', async () => {
-      const daoTreasury = Alice;
-
-      await dao.grant(
-        daofinPlugin.address,
-        Alice.address,
-        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
-      );
-
-      const beforeJuryCount = await daofinPlugin._judiciaryCommitteeCount();
-
-      const membersToBeRemoved = [Bob.address];
-
+    it('must revert if the xdc operator is part of xdcValidator', async () => {
+      await xdcValidatorMock.addCandidate(John.address);
       await daofinPlugin
-        .connect(daoTreasury)
-        .removeJudiciaryMember(Bob.address);
-
-      const afterJuryCount = await daofinPlugin._judiciaryCommitteeCount();
-
-      expect(beforeJuryCount.sub(membersToBeRemoved.length)).eq(afterJuryCount);
+        .connect(John)
+        .updateOrJoinMasterNodeDelegatee(Beny.address);
+      await expect(daofinPlugin.connect(Bob).syncWithXdcValidator(John.address))
+        .reverted;
     });
-
-    it('must remove to mapping', async () => {
-      const daoTreasury = Alice;
-
-      await dao.grant(
-        daofinPlugin.address,
-        Alice.address,
-        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
-      );
-
-      const newMembers = [John.address, Mike.address, Beny.address];
-
+    it('must not revert if the xdc operator is not part of xdcValidator, is part of committee', async () => {
+      await xdcValidatorMock.addCandidate(John.address);
       await daofinPlugin
-        .connect(daoTreasury)
-        .addJudiciaryMembers([John.address, Mike.address, Beny.address]);
+        .connect(John)
+        .updateOrJoinMasterNodeDelegatee(Beny.address);
+      await xdcValidatorMock.removeCandidate(John.address);
 
-      newMembers.forEach(async member => {
-        const isMember = await daofinPlugin._judiciaryCommittee(member);
-        expect(isMember).to.be.false;
-      });
+      await expect(daofinPlugin.connect(Bob).syncWithXdcValidator(John.address))
+        .not.reverted;
     });
   });
 });

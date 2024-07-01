@@ -9,7 +9,10 @@ import {
 } from '../../typechain';
 import {deployTestDao} from '../helpers/test-dao';
 import {getNamedTypesFromMetadata} from '../helpers/types';
-import {createCommitteeVotingSettings} from '../helpers/utils';
+import {
+  createCommitteeVotingSettings,
+  onlyJuryCommitteeVotingSettings,
+} from '../helpers/utils';
 import {
   ADDRESS_ZERO,
   CREATE_PROPOSAL_TYPE_PERMISSION_ID,
@@ -66,6 +69,7 @@ describe(PLUGIN_SETUP_CONTRACT_NAME, function () {
         createCommitteeVotingSettings(PeoplesHouseCommittee, '0', '0', '1'),
         createCommitteeVotingSettings(JudiciaryCommittee, '0', '0', '1'),
       ],
+      onlyJuryCommitteeVotingSettings(),
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
         BigNumber.from(now + 60 * 60 * 24 * 5),

@@ -66,6 +66,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         address xdcValidatorContract_,
         CommitteeVotingSettings[] memory grantSettings_,
         CommitteeVotingSettings[] memory generalSettings_,
+        CommitteeVotingSettings[] memory onlyJuryCommitteeVotingSettings_,
         uint64[] memory electionPeriod_,
         address[] calldata judiciaries_,
         uint256 proposalCosts_
@@ -123,7 +124,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
 
         // 3 = proposalType - ElectionPeriods
-        _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
+        _createOrModifyProposalType(_createProposalTypeId(), onlyJuryCommitteeVotingSettings_);
 
         // 4 = proposalType - Judiciary Replacement
         _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
@@ -565,6 +566,23 @@ contract DaofinPlugin is BaseDaofinPlugin {
         _createOrUpdateMasterNodeDelegatee(masterNode, delegatee_);
 
         emit MasterNodeDelegateeUpdated(masterNode, delegatee_);
+    }
+    function syncWithXdcValidator(address masterNode_) external {
+        // only a Judiciary Member can call this function
+        if (!isJudiciaryMember(_msgSender())) revert InValidAddress();
+        // supplied addresses must not be zero
+        if (masterNode_ == address(0)) revert AddressIsZero();
+        address delegatee = _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
+
+        // if mn has already a non-zero delegatee, means mn has already registered.
+        // && if mn has resigned from xdcValidator
+        if (delegatee != address(0) && !isXDCValidatorCandidate(masterNode_)) {
+            if (isWithinElectionPeriod()) revert InValidTime();
+            delete _masterNodeDelegatee.delegateeToMasterNode[delegatee];
+            delete _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
+            _masterNodeDelegatee.numberOfJointMasterNodes--;
+        } else revert InValidAddress();
+        emit MasterNodeDelegateeUpdated(masterNode_, delegatee);
     }
 
     function _createOrUpdateMasterNodeDelegatee(address masterNode_, address delegatee_) private {

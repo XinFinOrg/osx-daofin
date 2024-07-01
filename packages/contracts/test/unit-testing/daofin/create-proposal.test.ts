@@ -14,6 +14,7 @@ import {
   convertDaysToSeconds,
   createCommitteeVotingSettings,
   createProposalParams,
+  onlyJuryCommitteeVotingSettings,
 } from '../../helpers/utils';
 import {
   ADDRESS_ONE,
@@ -114,6 +115,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
           parseEther('1')
         ),
       ],
+      onlyJuryCommitteeVotingSettings(),
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
         BigNumber.from(now + 60 * 60 * 24 * 5),
@@ -135,7 +137,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         '0',
         '0'
       );
-      createPropsalParams[6] = {value: initializeParams[7].toString()};
+      createPropsalParams[6] = {value: initializeParams[8].toString()};
 
       expect(await daofinPlugin.proposalCount()).to.be.eq(BigNumber.from('0'));
       expect(await daofinPlugin.proposalCount()).to.not.be.eq(
@@ -160,7 +162,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         '0',
         '0'
       );
-      createPropsalParams[6] = {value: initializeParams[7].toString()};
+      createPropsalParams[6] = {value: initializeParams[8].toString()};
 
       const proposalId = await daofinPlugin.callStatic.createProposal(
         ...createPropsalParams
@@ -181,7 +183,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         '0',
         '0'
       );
-      createPropsalParams[6] = {value: initializeParams[7].toString()};
+      createPropsalParams[6] = {value: initializeParams[8].toString()};
 
       const daoBalanceBefore = await ethers.provider.getBalance(dao.address);
 
@@ -191,7 +193,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       expect(daoBalanceAfter).to.be.greaterThan(daoBalanceBefore);
 
       const isValid = daoBalanceAfter.eq(
-        daoBalanceBefore.add(initializeParams[7].toString())
+        daoBalanceBefore.add(initializeParams[8].toString())
       );
       expect(isValid).to.be.true;
     });

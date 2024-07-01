@@ -10,6 +10,7 @@ import {deployXDCValidator} from '../../helpers/test-xdc-validator';
 import {
   createCommitteeVotingSettings,
   createProposalParams,
+  onlyJuryCommitteeVotingSettings,
 } from '../../helpers/utils';
 import {
   ADDRESS_ONE,
@@ -105,6 +106,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
           parseEther('1')
         ),
       ],
+      onlyJuryCommitteeVotingSettings(),
       [
         Math.floor(new Date().getTime() / 1000),
         Math.floor(new Date().getTime() / 1000) + 60 * 1000 * 60,
