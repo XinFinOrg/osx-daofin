@@ -113,6 +113,7 @@ abstract contract BaseDaofinPlugin is
         keccak256("UPDATE_PROPOSAL_COSTS_PERMISSION");
 
     uint64 public constant EXECUTION_DELAY_BLOCK = 10 minutes;
+    uint64 public constant EXECUTION_DELAY_BLOCK_END = 1 days;
 
     event JudiciaryChanged(address _member, uint256 _action); // action: 0 = Add, 1 = Remove
     event ElectionPeriodUpdated(uint64 _start, uint64 _end);

@@ -10,6 +10,7 @@ import {
   UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
   UPDATE_MIN_HOUSE_AMOUNT_PERMISSION_ID,
   UPDATE_PROPOSAL_COSTS_PERMISSION_ID,
+  UPGRADE_PLUGIN_PERMISSION_ID,
 } from '../../../test/unit-testing/daofin-common';
 import {
   DaofinPlugin,
@@ -68,6 +69,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       CREATE_PROPOSAL_TYPE_PERMISSION_ID,
       UPDATE_PROPOSAL_COSTS_PERMISSION_ID,
       MODIFY_PROPOSAL_TYPE_PERMISSION_ID,
+      UPGRADE_PLUGIN_PERMISSION_ID,
     ],
     dao: [EXECUTE_PERMISSION_ID],
   };

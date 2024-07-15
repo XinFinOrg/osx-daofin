@@ -413,6 +413,8 @@ contract DaofinPlugin is BaseDaofinPlugin {
         if (!isThresholdReached(_proposalId)) return false;
         if (_proposals[_proposalId].endDate + EXECUTION_DELAY_BLOCK >= block.timestamp)
             return false;
+        if (_proposals[_proposalId].endDate + EXECUTION_DELAY_BLOCK_END <= block.timestamp)
+            return false;
         return true;
     }
 

@@ -26,6 +26,9 @@ export const MODIFY_PROPOSAL_TYPE_PERMISSION_ID = ethers.utils.id(
 export const UPDATE_PROPOSAL_COSTS_PERMISSION_ID = ethers.utils.id(
   'UPDATE_PROPOSAL_COSTS_PERMISSION'
 );
+export const UPGRADE_PLUGIN_PERMISSION_ID = ethers.utils.id(
+  'UPGRADE_PLUGIN_PERMISSION'
+);
 export const ROOT_PERMISSION_ID = ethers.utils.id('ROOT_PERMISSION');
 export const MasterNodeCommittee = ethers.utils.id('MASTER_NODE_COMMITTEE');
 export const PeoplesHouseCommittee = ethers.utils.id('PEOPLES_HOUSE_COMMITTEE');
