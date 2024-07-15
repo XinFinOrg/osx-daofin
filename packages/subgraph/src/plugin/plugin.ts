@@ -250,7 +250,7 @@ export function handleProposalTypeCreated(event: ProposalTypeCreated): void {
   pluginProposalType.txHash = event.transaction.hash;
   pluginProposalType.creationDate = event.block.timestamp;
   pluginProposalType.plugin = plugin.id;
-  pluginProposalType.proposalTypeId = pluginProposalTypeId;
+  pluginProposalType.proposalTypeId = pluginProposalTypeId.toString();
 
   pluginProposalType.save();
 
@@ -290,14 +290,14 @@ export function handleProposalIdToProposalTypeIdAttached(
   let proposalId = getProposalId(pluginAddress, event.params._proposalId);
 
   let pluginProposalType = PluginProposalType.load(
-    proposalId.concat(pluginProposalTypeId)
+    pluginInstallationId.concat(pluginProposalTypeId)
   );
   if (!pluginProposalType) return;
 
   let entity = PluginProposal.load(proposalId);
   if (!entity) return;
 
-  entity.proposalType = proposalId.concat(pluginProposalTypeId);
+  entity.proposalType = pluginInstallationId.concat(pluginProposalTypeId);
   entity.save();
 }
 export function handleProposalExecuted(event: ProposalExecuted): void {

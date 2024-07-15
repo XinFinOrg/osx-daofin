@@ -8,8 +8,10 @@ import {
   keccak256,
 } from 'ethers/lib/utils';
 import {existsSync, statSync, readFileSync, writeFileSync} from 'fs';
+import * as fs from 'fs';
 import {ethers} from 'hardhat';
 import {upgrades} from 'hardhat';
+import * as path from 'path';
 
 export type NetworkNameMapping = {[index: string]: string};
 
@@ -242,3 +244,38 @@ export function encodePlugin(params: any, METADATA: any) {
 export const MasterNodeCommittee = ethers.utils.id('MASTER_NODE_COMMITTEE');
 export const PeoplesHouseCommittee = ethers.utils.id('PEOPLES_HOUSE_COMMITTEE');
 export const JudiciaryCommittee = ethers.utils.id('JUDICIARY_COMMITTEE');
+
+interface Data {
+  [chainId: string]: {
+    daoAddress: string;
+    pluginAddress: string;
+    factory: string;
+  };
+}
+
+// Function to read JSON file
+export function readJsonFile(
+  filePath: string = 'deployments.json'
+): Data | null {
+  try {
+    const data = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error reading file:', err);
+    return null;
+  }
+}
+
+// Function to write to JSON file
+export function writeJsonFile(data: Data): void {
+  try {
+    fs.writeFileSync(
+      'deployments.json',
+      JSON.stringify(data, null, 2),
+      'utf-8'
+    );
+    console.log('File successfully written!');
+  } catch (err) {
+    console.error('Error writing file:', err);
+  }
+}

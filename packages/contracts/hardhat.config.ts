@@ -29,7 +29,7 @@ const apiUrls: NetworkNameMapping = {
   goerli: 'https://goerli.infura.io/v3/',
   polygon: 'https://polygon-testnet.public.blastapi.io',
   polygonMumbai: 'https://rpc.ankr.com/polygon_mumbai',
-  apothem: 'https://rpc.ankr.com/xdc_testnet',
+  apothem: 'https://erpc.apothem.network',
   xdc: 'https://erpc.xinfin.network',
 };
 
@@ -70,10 +70,10 @@ const networks: {[index: string]: NetworkUserConfig} = {
     chainId: 51,
     url: `${apiUrls.apothem}`,
   },
-  // xdc: {
-  //   chainId: 51,
-  //   url: `${apiUrls.xdc}`,
-  // },
+  xdc: {
+    chainId: 50,
+    url: `${apiUrls.xdc}`,
+  },
   anvil: {
     chainId: parseInt(process.env.ANVIL_CHAIN_ID as string) || 34337,
     url: process.env.ANVIL_RPC_URL || '',

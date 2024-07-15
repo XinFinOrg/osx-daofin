@@ -190,3 +190,8 @@ type PluginElectionPeriods @entity {
   endDate: BigInt!
   plugin: Plugin!
 }
+type DaofinPluginFactory @entity {
+  id: ID!
+  dao: ID!
+  plugin: ID!
+}
