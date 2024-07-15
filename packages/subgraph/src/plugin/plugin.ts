@@ -222,7 +222,7 @@ export function handleVoteReceived(event: VoteReceived): void {
   entity.option = event.params._voteOption;
   entity.txHash = event.transaction.hash;
   entity.snapshotBlock = event.block.number;
-  entity.proposal = pluginProposal.pluginProposalId.toHexString();
+  entity.proposal = pluginProposal.id;
 
   entity.save();
 }
