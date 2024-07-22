@@ -12,15 +12,9 @@ export function getProposalId(
 }
 export function getDepositId(
   depositor: Address,
-  daoAddress: Address,
-  blockNumber: BigInt
+  installationId: string
 ): string {
-  return daoAddress
-    .toHexString()
-    .concat('_')
-    .concat(depositor.toHexString())
-    .concat('_')
-    .concat(bigIntToBytes32(blockNumber));
+  return installationId.concat('_').concat(depositor.toHexString());
 }
 export function getJudiciaryId(
   pluginId: string,

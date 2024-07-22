@@ -24,6 +24,8 @@ import {
   ProposalExecuted,
   ElectionPeriodUpdated,
   UpdateElectionPeriodCall,
+  HouseResignRequested,
+  HouseResigned,
 } from '../../generated/templates/DaofinPlugin/DaofinPlugin';
 import {
   getDepositId,
@@ -32,7 +34,7 @@ import {
   getPluginProposalVoteId,
   getProposalId,
 } from '../../utils/proposals';
-import {Address, BigInt, dataSource} from '@graphprotocol/graph-ts';
+import {Address, BigInt, dataSource, store} from '@graphprotocol/graph-ts';
 
 export function handleProposalCreated(event: ProposalCreated): void {
   let context = dataSource.context();
@@ -84,19 +86,16 @@ export function handleProposalCreated(event: ProposalCreated): void {
 export function handleDeposited(event: Deposited): void {
   let context = dataSource.context();
   let daoId = context.getString('daoAddress');
-  const depositId = getDepositId(
-    event.transaction.from,
-    Address.fromString(daoId),
-    event.block.number
-  );
-  const plugin = event.transaction.to;
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  if (!pluginInstallationId) return;
+
+  let plugin = Plugin.load(pluginInstallationId);
   if (!plugin) {
     return;
   }
-  let pluginInstallationId = getPluginInstallationId(
-    Address.fromString(daoId.toString()),
-    plugin
-  );
+
+  const depositId = getDepositId(event.transaction.from, pluginInstallationId);
+
   let entity = PluginDeposit.load(depositId);
   if (!entity) {
     entity = new PluginDeposit(depositId);
@@ -107,8 +106,10 @@ export function handleDeposited(event: Deposited): void {
   entity.txHash = event.transaction.hash;
   entity.depositDate = event.block.timestamp;
   entity.dao = daoId;
+  entity.isActive = true;
+
   if (pluginInstallationId) {
-    entity.plugin = pluginInstallationId.toHexString();
+    entity.plugin = pluginInstallationId;
   }
   entity.save();
 }
@@ -356,4 +357,53 @@ export function handleElectionPeriodUpdated(
   electionSchema.plugin = plugin.id;
 
   electionSchema.save();
+}
+export function handleHouseResignRequested(event: HouseResignRequested): void {
+  let context = dataSource.context();
+
+  let daoId = context.getString('daoAddress');
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  if (!pluginInstallationId) return;
+
+  let dao = Dao.load(daoId.toString());
+  if (!dao) return;
+
+  let plugin = Plugin.load(pluginInstallationId);
+  if (!plugin) return;
+
+  const depositId = getDepositId(event.transaction.from, pluginInstallationId);
+  let entity = PluginDeposit.load(depositId);
+  if (!entity) return;
+
+  entity.isActive = false;
+
+  entity.amount = event.params._amount;
+  entity.startOfCooldownPeriod = event.block.timestamp;
+  entity.endOfCooldownPeriod = event.params._cooldown;
+  entity.requestToResignTimestamp = event.block.timestamp;
+  entity.requestToResignTxHash = event.transaction.hash;
+
+  entity.save();
+}
+export function handleHouseResigned(event: HouseResigned): void {
+  let context = dataSource.context();
+
+  let daoId = context.getString('daoAddress');
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  if (!pluginInstallationId) return;
+
+  let dao = Dao.load(daoId.toString());
+  if (!dao) return;
+
+  let plugin = Plugin.load(pluginInstallationId);
+  if (!plugin) return;
+
+  const depositId = getDepositId(event.transaction.from, pluginInstallationId);
+  let entity = PluginDeposit.load(depositId);
+  if (!entity) return;
+  store.remove('PluginDeposit', depositId);
+  // entity.claimTimestamp = event.block.timestamp;
+  // entity.claimTxHash = event.transaction.hash;
+
+  // entity.save();
 }

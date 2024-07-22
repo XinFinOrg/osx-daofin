@@ -296,6 +296,8 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
         // A Block delay to onboard members in house
         require(snapshotBlockNumber > _voterToLockedAmounts[_member].blockNumber, "Daofin:");
+        if (!_voterToLockedAmounts[_member].isActive && _voterToLockedAmounts[_member].amount > 0)
+            revert WrongOperation();
 
         // sender must not be part of MN Delegatees
         if (isMasterNodeDelegatee(_member)) revert InValidAddress();
@@ -333,6 +335,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
         if (_hd.amount <= 0) revert InValidAmount();
         if (_hd.blockNumber == 0) revert InValidBlockNumber();
+        if (!_hd.isActive) revert InValidStatus();
 
         // set the flag to false
         _hd.isActive = false;

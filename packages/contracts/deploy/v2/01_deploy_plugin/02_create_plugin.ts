@@ -101,9 +101,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     [
       // 1st
       BigNumber.from(Math.floor(new Date().getTime() / 1000) + 60 * 15),
-      BigNumber.from(
-        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 5
-      ),
+      BigNumber.from(Math.floor(new Date().getTime() / 1000) + 60 * 30),
       // 2nd
       BigNumber.from(
         Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 5

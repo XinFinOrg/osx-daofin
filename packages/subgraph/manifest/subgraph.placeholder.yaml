@@ -124,5 +124,9 @@ templates:
           handler: handleProposalExecuted
         - event: ElectionPeriodUpdated(uint64,uint64)
           handler: handleElectionPeriodUpdated
+        - event: HouseResignRequested(address,uint256,uint64)
+          handler: handleHouseResignRequested
+        - event: HouseResigned(address,uint256)
+          handler: handleHouseResigned
       file: ./src/plugin/plugin.ts
 
