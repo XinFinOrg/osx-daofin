@@ -86,7 +86,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
             uint64 _startDate = electionPeriod_[i];
             uint64 _endDate = electionPeriod_[i + 1];
 
-            if (_startDate > _endDate) revert InValidDate();
+            if (_startDate + 1 weeks >= _endDate) revert InValidDate();
             _electionPeriods.push(ElectionPeriod(_startDate, _endDate));
 
             emit ElectionPeriodUpdated(_startDate, _endDate);
@@ -325,7 +325,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
     function resignHouse() external {
         address _member = _msgSender();
-        uint64 _now = block.timestamp.toUint64();
+        uint64 _now = getBlockTimestamp();
 
         // resign request must not be
         // in an active election period
@@ -349,7 +349,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
     function executeResignHouse() external {
         address _member = _msgSender();
-        uint64 _now = block.timestamp.toUint64();
+        uint64 _now = getBlockTimestamp();
 
         HouseDeposit memory _hd = _voterToLockedAmounts[_member];
 
@@ -386,7 +386,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         uint64 endDate,
         bool executed
     ) private view returns (bool) {
-        uint64 currentTime = block.timestamp.toUint64();
+        uint64 currentTime = getBlockTimestamp();
         return startDate <= currentTime && currentTime < endDate && !executed;
     }
 
@@ -626,7 +626,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
     ) private view returns (uint64, uint64) {
         uint64 _startDate = _electionPeriods[_electionIndex].startDate;
         uint64 _endDate = _electionPeriods[_electionIndex].endDate;
-        uint64 _now = block.timestamp.toUint64();
+        uint64 _now = getBlockTimestamp();
 
         // fetched dates must not be zero
         if (_startDate == 0 || _endDate == 0) revert InValidDate();
@@ -801,7 +801,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
     }
 
     function isWithinElectionPeriod() public view returns (bool) {
-        uint64 _now = block.timestamp.toUint64();
+        uint64 _now = getBlockTimestamp();
 
         for (uint i = 0; i < _electionPeriods.length; i++) {
             if (_electionPeriods[i].startDate <= _now && _electionPeriods[i].endDate > _now) {
@@ -815,7 +815,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         return isMasterNodeDelegatee(_voter) || isJudiciaryMember(_voter) || isPeopleHouse(_voter);
     }
 
-    function getBlockSnapshot() public view returns (uint256 snapshotBlock) {
+    function getBlockSnapshot() private view returns (uint256 snapshotBlock) {
         unchecked {
             /* 
              The snapshot block must be mined
@@ -825,6 +825,10 @@ contract DaofinPlugin is BaseDaofinPlugin {
             */
             snapshotBlock = block.number - 1;
         }
+    }
+
+    function getBlockTimestamp() private view returns (uint64 timestamp) {
+        return block.timestamp.toUint64();
     }
 
     receive() external payable {}
