@@ -100,7 +100,11 @@ export function handleDeposited(event: Deposited): void {
   if (!entity) {
     entity = new PluginDeposit(depositId);
   }
-  entity.amount = event.params._amount;
+  if (entity.get('amount') == null) {
+    entity.amount = new BigInt(0);
+  } else {
+    entity.amount = entity.amount.plus(event.params._amount);
+  }
   entity.voter = event.params._depositer;
   entity.snapshotBlock = event.block.number;
   entity.txHash = event.transaction.hash;

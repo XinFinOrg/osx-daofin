@@ -310,7 +310,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         _voterToLockedAmounts[_member].isActive = true;
 
         // Increase the balance in house
-        _voterToLockedAmounts[_member].amount += _value;
+        _voterToLockedAmounts[_member].amount = _voterToLockedAmounts[_member].amount + _value;
 
         // store the last blocknumber to the above delay
         _voterToLockedAmounts[_member].blockNumber = snapshotBlockNumber;
@@ -342,7 +342,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
         // sets information to start the cooldown periods
         _hd.startOfCooldownPeriod = _now;
-        _hd.endOfCooldownPeriod = _now + 7 days;
+        _hd.endOfCooldownPeriod = _now + 1 days;
 
         emit HouseResignRequested(_member, _hd.amount, _hd.endOfCooldownPeriod);
     }
@@ -566,10 +566,31 @@ contract DaofinPlugin is BaseDaofinPlugin {
         if (isPeopleHouse(delegatee_)) revert InValidAddress();
         if (isPeopleHouse(masterNode)) revert InValidAddress();
 
+        // Can't join or resign within voting periods.
+        if (isWithinElectionPeriod()) revert InValidTime();
+
         // Store in mapping and reverse mappings
         _createOrUpdateMasterNodeDelegatee(masterNode, delegatee_);
 
         emit MasterNodeDelegateeUpdated(masterNode, delegatee_);
+    }
+
+    function syncWithXdcValidator(address masterNode_) external {
+        // only a Judiciary Member can call this function
+        if (!isJudiciaryMember(_msgSender())) revert InValidAddress();
+        // supplied addresses must not be zero
+        if (masterNode_ == address(0)) revert AddressIsZero();
+        address delegatee = _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
+
+        // if mn has already a non-zero delegatee, means mn has already registered.
+        // && if mn has resigned from xdcValidator
+        if (delegatee != address(0) && !isXDCValidatorCandidate(masterNode_)) {
+            if (isWithinElectionPeriod()) revert InValidTime();
+            delete _masterNodeDelegatee.delegateeToMasterNode[delegatee];
+            delete _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
+            _masterNodeDelegatee.numberOfJointMasterNodes--;
+        } else revert InValidAddress();
+        emit MasterNodeDelegateeUpdated(masterNode_, delegatee);
     }
 
     function _createOrUpdateMasterNodeDelegatee(address masterNode_, address delegatee_) private {
@@ -583,8 +604,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
         if (_cachedDelegatee == address(0) && _cachedMasterNode == address(0)) {
             _masterNodeDelegatee.numberOfJointMasterNodes++;
-        } else {
-            if (isWithinElectionPeriod()) revert InValidTime();
         }
 
         // stores on reverse mappings for ease of accessibilities
@@ -758,8 +777,10 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
     function getTotalNumberOfMembersByCommittee(bytes32 committee_) public view returns (uint256) {
         if (committee_ == MasterNodeCommittee) {
-            (uint256 xdcValidator, ) = getTotalNumberOfMN();
-            return xdcValidator;
+            (uint256 xdcValidatorCount, uint256 joinedCandidateCount) = getTotalNumberOfMN();
+            if (isWithinElectionPeriod() && joinedCandidateCount > xdcValidatorCount)
+                return joinedCandidateCount;
+            else return xdcValidatorCount;
         } else if (committee_ == JudiciaryCommittee) {
             return getTotalNumberOfJudiciary();
         } else if (committee_ == PeoplesHouseCommittee) {
