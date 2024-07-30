@@ -329,7 +329,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
         // resign request must not be
         // in an active election period
-        if (isWithinElectionPeriod()) revert InValidTime();
+        if (isWithinProposalSession()) revert InValidTime();
 
         HouseDeposit storage _hd = _voterToLockedAmounts[_member];
 
@@ -566,8 +566,8 @@ contract DaofinPlugin is BaseDaofinPlugin {
         if (isPeopleHouse(delegatee_)) revert InValidAddress();
         if (isPeopleHouse(masterNode)) revert InValidAddress();
 
-        // Can't join or resign within voting periods.
-        if (isWithinElectionPeriod()) revert InValidTime();
+        // Can't join or resign within proposal session.
+        if (isWithinProposalSession()) revert InValidTime();
 
         // Store in mapping and reverse mappings
         _createOrUpdateMasterNodeDelegatee(masterNode, delegatee_);
@@ -576,8 +576,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
     }
 
     function syncWithXdcValidator(address masterNode_) external {
-        // only a Judiciary Member can call this function
-        if (!isJudiciaryMember(_msgSender())) revert InValidAddress();
         // supplied addresses must not be zero
         if (masterNode_ == address(0)) revert AddressIsZero();
         address delegatee = _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
@@ -585,7 +583,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // if mn has already a non-zero delegatee, means mn has already registered.
         // && if mn has resigned from xdcValidator
         if (delegatee != address(0) && !isXDCValidatorCandidate(masterNode_)) {
-            if (isWithinElectionPeriod()) revert InValidTime();
+            if (isWithinProposalSession()) revert InValidTime();
             delete _masterNodeDelegatee.delegateeToMasterNode[delegatee];
             delete _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
             _masterNodeDelegatee.numberOfJointMasterNodes--;
@@ -778,7 +776,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
     function getTotalNumberOfMembersByCommittee(bytes32 committee_) public view returns (uint256) {
         if (committee_ == MasterNodeCommittee) {
             (uint256 xdcValidatorCount, uint256 joinedCandidateCount) = getTotalNumberOfMN();
-            if (isWithinElectionPeriod() && joinedCandidateCount > xdcValidatorCount)
+            if (isWithinProposalSession() && joinedCandidateCount > xdcValidatorCount)
                 return joinedCandidateCount;
             else return xdcValidatorCount;
         } else if (committee_ == JudiciaryCommittee) {
@@ -800,11 +798,14 @@ contract DaofinPlugin is BaseDaofinPlugin {
         return _proposalTypesToCommiteesVotingSettings[proposalTypeId_][committee_];
     }
 
-    function isWithinElectionPeriod() public view returns (bool) {
+    function isWithinProposalSession() public view returns (bool) {
         uint64 _now = getBlockTimestamp();
 
         for (uint i = 0; i < _electionPeriods.length; i++) {
-            if (_electionPeriods[i].startDate <= _now && _electionPeriods[i].endDate > _now) {
+            if (
+                _electionPeriods[i].startDate <= _now &&
+                _electionPeriods[i].endDate + EXECUTION_DELAY_BLOCK_END > _now
+            ) {
                 return true;
             }
         }
