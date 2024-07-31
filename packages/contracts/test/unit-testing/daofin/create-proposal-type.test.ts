@@ -121,7 +121,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       ],
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
-        BigNumber.from(now + 60 * 60 * 24 * 5),
+        BigNumber.from(now + 60 * 60 * 24 * 15),
       ],
       [Bob.address],
       parseEther('1'),
@@ -215,14 +215,20 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         ])
       ).to.not.reverted;
       const after = await daofinPlugin.proposalTypeCount();
+      const settings = await daofinPlugin.getCommitteesToVotingSettings(
+        before,
+        JudiciaryCommittee
+      );
 
+      expect(100000).eq(settings.supportThreshold);
+      expect(100001).not.eq(settings.supportThreshold);
       expect(before.add(1)).eq(after);
     });
   });
   describe('Modify ProposalType', async () => {
     it('Modify Proposal Type', async () => {
       const before = await daofinPlugin.proposalTypeCount();
-      const proposalType = '1';
+      const proposalType = '0';
 
       await expect(
         daofinPlugin.modifyProposalType(proposalType, [

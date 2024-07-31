@@ -46,6 +46,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
     // The incremental ID for proposal types.
     CountersUpgradeable.Counter private proposalTypeCounter;
 
+    uint256 public masternodeCountSnapshot;
     /*
         proposalTypeID => committeeID => (VotingSettings struct)
         NOTE: holds proposal type id voting information per committee
@@ -82,27 +83,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         _settings.xdcValidator = IXDCValidator(xdcValidatorContract_);
 
         // Assign and check Election period
-        for (uint256 i; i < electionPeriod_.length; ) {
-            uint64 _startDate = electionPeriod_[i];
-            uint64 _endDate = electionPeriod_[i + 1];
-
-            if (_startDate + 1 weeks >= _endDate) revert InValidDate();
-            _electionPeriods.push(ElectionPeriod(_startDate, _endDate));
-
-            emit ElectionPeriodUpdated(_startDate, _endDate);
-            unchecked {
-                /* 
-                    Receives election periods
-                    in an array
-                    [
-                        startDate1,endDate1,
-                        startDate2,endDate2,
-                        ...
-                    ]
-                */
-                i = i + 2;
-            }
-        }
+        _updateElectionPeriod(electionPeriod_);
 
         // Assign Proposal Creation costs
         proposalCosts = proposalCosts_;
@@ -116,21 +97,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // 0 = proposalType - Grants
         _createOrModifyProposalType(_createProposalTypeId(), grantSettings_);
 
-        // 1 = proposalType - Creation of proposalType
-        _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
-
-        // 2 = proposalType - Changing voting settings
-        _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
-
-        // 3 = proposalType - ElectionPeriods
-        _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
-
-        // 4 = proposalType - Judiciary Replacement
-        _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
-
-        // 5 = proposalCosts - Proposal Costs
-        _createOrModifyProposalType(_createProposalTypeId(), generalSettings_);
-
         // set up minimum house deposit amount
         _settings.houseMinAmount = allowedAmount_;
 
@@ -138,6 +104,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         _daofinGlobalSettings = _settings;
 
         _addJudiciaryMember(judiciaries_);
+        syncXdcValidatorSnapshot();
     }
 
     function createProposal(
@@ -521,17 +488,35 @@ contract DaofinPlugin is BaseDaofinPlugin {
         emit JudiciaryChanged(_member, 1);
     }
 
-    function updateElectionPeriod(
-        ElectionPeriod[] calldata _periods
-    ) public auth(UPDATE_ELECTION_PERIOD_PERMISSION) {
-        for (uint256 i; i < _periods.length; i++) {
-            uint64 _startDate = _periods[i].startDate;
-            uint64 _endDate = _periods[i].endDate;
-            if (_startDate > _endDate) revert InValidDate();
+    function _updateElectionPeriod(uint64[] memory _periods) private {
+        for (uint256 i; i < _periods.length; ) {
+            uint64 _startDate = _periods[i];
+            uint64 _endDate = _periods[i + 1];
+
             if (_startDate + 1 weeks >= _endDate) revert InValidDate();
             _electionPeriods.push(ElectionPeriod(_startDate, _endDate));
+
             emit ElectionPeriodUpdated(_startDate, _endDate);
+            unchecked {
+                /*
+                    Receives election periods
+                    in an array
+                    [
+                        startDate1,endDate1,
+                        startDate2,endDate2,
+                        ...
+                    ]
+                */
+                i = i + 2;
+            }
         }
+    }
+
+    function updateElectionPeriod(
+        uint64[] calldata _periods
+    ) external auth(UPDATE_ELECTION_PERIOD_PERMISSION) {
+        if (_periods.length == 0) revert();
+        _updateElectionPeriod(_periods);
     }
 
     function updateAllowedAmounts(
@@ -589,6 +574,15 @@ contract DaofinPlugin is BaseDaofinPlugin {
             _masterNodeDelegatee.numberOfJointMasterNodes--;
         } else revert InValidAddress();
         emit MasterNodeDelegateeUpdated(masterNode_, delegatee);
+    }
+
+    function syncXdcValidatorSnapshot() public {
+        if (isWithinProposalSession()) revert InValidTime();
+
+        uint256 xdcValidatorCount = _daofinGlobalSettings.xdcValidator.candidateCount();
+        if (masternodeCountSnapshot != xdcValidatorCount) {
+            masternodeCountSnapshot = xdcValidatorCount;
+        }
     }
 
     function _createOrUpdateMasterNodeDelegatee(address masterNode_, address delegatee_) private {
@@ -775,10 +769,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
 
     function getTotalNumberOfMembersByCommittee(bytes32 committee_) public view returns (uint256) {
         if (committee_ == MasterNodeCommittee) {
-            (uint256 xdcValidatorCount, uint256 joinedCandidateCount) = getTotalNumberOfMN();
-            if (isWithinProposalSession() && joinedCandidateCount > xdcValidatorCount)
-                return joinedCandidateCount;
-            else return xdcValidatorCount;
+            return masternodeCountSnapshot;
         } else if (committee_ == JudiciaryCommittee) {
             return getTotalNumberOfJudiciary();
         } else if (committee_ == PeoplesHouseCommittee) {
