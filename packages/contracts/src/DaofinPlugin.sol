@@ -463,7 +463,6 @@ contract DaofinPlugin is BaseDaofinPlugin {
         for (uint256 i = 0; i < _members.length; i++) {
             if (_members[i] == address(0)) revert AddressIsZero();
             if (isJudiciaryMember(_members[i])) revert JudiciaryExist();
-            if (isMasterNodeDelegatee(_members[i])) revert InValidAddress();
             if (isPeopleHouse(_members[i])) revert InValidAddress();
             if (isXDCValidatorCandidate(_members[i])) revert InValidAddress();
 
