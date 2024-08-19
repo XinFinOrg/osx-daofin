@@ -261,6 +261,7 @@ export function readJsonFile(
     const data = fs.readFileSync(filePath, 'utf-8');
     return JSON.parse(data);
   } catch (err) {
+    writeJsonFile({});
     console.error('Error reading file:', err);
     return null;
   }

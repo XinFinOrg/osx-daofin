@@ -1,25 +1,25 @@
 {
   "info": "# Do not edit subgraph.yaml,this is a generated file. \n# Instead, edit subgraph.placeholder.yaml and run: yarn manifest",
   "network": "xinfin",
-  "startBlock": "76925618",
+  "startBlock": "78050000",
   "dataSources": {
     "DaofinPluginFactory": {
       "name": "DaofinPluginFactory",
-      "address": "0x9CEFAC515162C1BE9b290DE39F3E48217d251e92",
-      "startBlock": 76925618
+      "address": "0xAF9818b2C94220Ea6740354C26DF901852BC9C93",
+      "startBlock": 78050000
     },
     "PluginSetupProcessors": [
       {
         "name": "PluginSetupProcessor",
         "address": "0x308a1DC5020c4B5d992F5543a7236c465997fecB",
-        "startBlock": 76925618
+        "startBlock": 78050000
       }
     ],
     "DAO": [
       {
         "name": "DAO",
-        "address": "0xa32fDeE1F1e9ca9E4A6eb1Ce4fD7A0db044405bB",
-        "startBlock": 76925618
+        "address": "0xd7BF844A67954437593057b038b221485a2555C3",
+        "startBlock": 78050000
       }
     ]
   }

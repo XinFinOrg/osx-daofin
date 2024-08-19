@@ -101,7 +101,7 @@ export function handleDeposited(event: Deposited): void {
     entity = new PluginDeposit(depositId);
   }
   if (entity.get('amount') == null) {
-    entity.amount = new BigInt(0);
+    entity.amount = event.params._amount;
   } else {
     entity.amount = entity.amount.plus(event.params._amount);
   }
@@ -248,23 +248,29 @@ export function handleProposalTypeCreated(event: ProposalTypeCreated): void {
 
   let pluginProposalType = PluginProposalType.load(subgraphId);
 
-  if (pluginProposalType) return;
+  if (!pluginProposalType) {
+    pluginProposalType = new PluginProposalType(subgraphId);
 
-  pluginProposalType = new PluginProposalType(subgraphId);
+    pluginProposalType.txHash = event.transaction.hash;
+    pluginProposalType.creationDate = event.block.timestamp;
+    pluginProposalType.plugin = plugin.id;
+    pluginProposalType.proposalTypeId = pluginProposalTypeId.toString();
 
-  pluginProposalType.txHash = event.transaction.hash;
-  pluginProposalType.creationDate = event.block.timestamp;
-  pluginProposalType.plugin = plugin.id;
-  pluginProposalType.proposalTypeId = pluginProposalTypeId.toString();
-
-  pluginProposalType.save();
+    pluginProposalType.save();
+  }
 
   for (let i = 0; i < event.params._settings.length; i++) {
     let item = event.params._settings[i];
 
-    let setting = new CommitteeVotingSettings(
+    let setting = CommitteeVotingSettings.load(
       subgraphId.concat(item.name.toHexString())
     );
+    if (!setting) {
+      setting = new CommitteeVotingSettings(
+        subgraphId.concat(item.name.toHexString())
+      );
+    }
+
     setting.name = item.name;
     setting.minParticipation = item.minParticipation;
     setting.supportThreshold = item.supportThreshold;

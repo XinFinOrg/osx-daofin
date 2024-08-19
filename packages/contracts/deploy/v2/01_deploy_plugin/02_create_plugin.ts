@@ -1,4 +1,4 @@
-import DaoData from '../../../dao-initial-data.json';
+import DaoData from '../../../dao-initial-data.mainnet.json';
 import {DaofinPluginSetupParams} from '../../../plugin-settings';
 import {ADDRESS_ZERO} from '../../../test/unit-testing/daofin-common';
 import {
@@ -100,36 +100,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     ],
     [
       // 1st
-      BigNumber.from(Math.floor(new Date().getTime() / 1000) + 60 * 15),
-      BigNumber.from(Math.floor(new Date().getTime() / 1000) + 60 * 30),
+      1724068800, // GMT: Monday, August 19, 2024 12:00:00 PM
+      1725278400, // GMT: Monday, September 2, 2024 12:00:00 PM
+
       // 2nd
-      BigNumber.from(
-        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 5
-      ),
-      BigNumber.from(
-        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 7
-      ),
+      1726488000, //GMT: Monday, September 16, 2024 12:00:00 PM
+      1727697600, //GMT: Monday, September 30, 2024 12:00:00 PM
+
       // 3rd
-      BigNumber.from(
-        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 7
-      ),
-      BigNumber.from(
-        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 9
-      ),
+      1728907200, //GMT: Monday, October 14, 2024 12:00:00 PM
+      1730376000, //GMT: Thursday, October 31, 2024 12:00:00 PM
+
       // 4th
-      BigNumber.from(
-        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 9
-      ),
-      BigNumber.from(
-        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 11
-      ),
-      // 5th
-      BigNumber.from(
-        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 13
-      ),
-      BigNumber.from(
-        Math.floor(new Date().getTime() / 1000) + 60 * 60 * 24 * 15
-      ),
+      1734350400, //GMT: Monday, December 16, 2024 12:00:00 PM
+      1735560000, //GMT: Monday, December 30, 2024 12:00:00 PM
     ],
     daoParams.judiciaryList,
     parseEther('1'),
@@ -180,7 +164,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   if (!deployments) return;
   deployments[network].pluginAddress = staticCall[1];
   writeJsonFile(deployments);
-  console.log(await daofin.getElectionPeriods());
+  console.log(await daofin.proposalTypeCount());
 };
 
 export default func;
