@@ -133,6 +133,7 @@ abstract contract BaseDaofinPlugin is
     event HouseResignRequested(address _houseMember, uint256 _amount, uint64 _cooldown);
     event HouseResigned(address _houseMember, uint256 _amount);
     event ProposalMetadataUpdated(uint256 _proposalId, bytes _metadata);
+    event MnSynced(address _mn);
 
     function supportsInterface(
         bytes4 interfaceId

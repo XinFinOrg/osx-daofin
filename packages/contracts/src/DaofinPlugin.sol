@@ -60,6 +60,12 @@ contract DaofinPlugin is BaseDaofinPlugin {
     // Holds Election/voting Periods
     ElectionPeriod[] private _electionPeriods;
 
+    // ----------------
+    // UPDATED - 1
+
+    // plugin delegate => Mn owner weight
+    mapping(address => uint256) public mnToWeights;
+
     // initialize function executes during the plugin setup
     function initialize(
         IDAO _dao,
@@ -204,6 +210,9 @@ contract DaofinPlugin is BaseDaofinPlugin {
         // Exception for House
         if (committee == PeoplesHouseCommittee) {
             votingPower = _voterToLockedAmounts[voter_].amount / (10 ** 18);
+        }
+        if (committee == MasterNodeCommittee) {
+            votingPower = mnToWeights[voter_];
         }
         if (voteOption_ == VoteOption.Yes) {
             td.yes += votingPower;
@@ -559,29 +568,39 @@ contract DaofinPlugin is BaseDaofinPlugin {
         emit MasterNodeDelegateeUpdated(masterNode, delegatee_);
     }
 
-    function syncWithXdcValidator(address masterNode_) external {
+    function syncWithXdcValidator(address masterNode_) external returns (bool) {
         // supplied addresses must not be zero
         if (masterNode_ == address(0)) revert AddressIsZero();
         address delegatee = _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
 
         // if mn has already a non-zero delegatee, means mn has already registered.
         // && if mn has resigned from xdcValidator
-        if (delegatee != address(0) && !isXDCValidatorCandidate(masterNode_)) {
+        if (delegatee != address(0)) {
             if (isWithinProposalSession()) revert InValidTime();
-            delete _masterNodeDelegatee.delegateeToMasterNode[delegatee];
-            delete _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
-            _masterNodeDelegatee.numberOfJointMasterNodes--;
-        } else revert InValidAddress();
-        emit MasterNodeDelegateeUpdated(masterNode_, delegatee);
+            if (!isXDCValidatorCandidate(masterNode_)) {
+                delete _masterNodeDelegatee.delegateeToMasterNode[delegatee];
+                delete _masterNodeDelegatee.masterNodeToDelegatee[masterNode_];
+                delete mnToWeights[delegatee];
+                _masterNodeDelegatee.numberOfJointMasterNodes--;
+            }
+
+            mnToWeights[masterNode_] = getMnWeight(masterNode_);
+
+            emit MnSynced(masterNode_);
+            return true;
+        }
+        return false;
     }
 
-    function syncXdcValidatorSnapshot() public {
+    function syncXdcValidatorSnapshot() public returns (bool) {
         if (isWithinProposalSession()) revert InValidTime();
 
         uint256 xdcValidatorCount = _daofinGlobalSettings.xdcValidator.candidateCount();
         if (masternodeCountSnapshot != xdcValidatorCount) {
             masternodeCountSnapshot = xdcValidatorCount;
+            return true;
         }
+        return false;
     }
 
     function _createOrUpdateMasterNodeDelegatee(address masterNode_, address delegatee_) private {
@@ -596,7 +615,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         if (_cachedDelegatee == address(0) && _cachedMasterNode == address(0)) {
             _masterNodeDelegatee.numberOfJointMasterNodes++;
         }
-
+        mnToWeights[delegatee_] = getMnWeight(masterNode_);
         // stores on reverse mappings for ease of accessibilities
         _masterNodeDelegatee.masterNodeToDelegatee[masterNode_] = delegatee_;
         _masterNodeDelegatee.delegateeToMasterNode[delegatee_] = masterNode_;
@@ -651,8 +670,31 @@ contract DaofinPlugin is BaseDaofinPlugin {
         emit ProposalMetadataUpdated(_proposalId, _metadata);
     }
 
-    function isXDCValidatorCandidate(address masterNode_) private view returns (bool isValid) {
-        return getGlobalSettings().xdcValidator.isCandidate(masterNode_);
+    // finds the number of candidates that an owner has.
+    // the parameter is equivalant to owner in XDOPS.
+    function getMnWeight(address masterNode_) public view returns (uint256) {
+        uint256 weight = 0;
+        address[] memory candidates = getGlobalSettings().xdcValidator.getCandidates();
+        for (uint256 i = 0; i < candidates.length; i++) {
+            address owner = getGlobalSettings().xdcValidator.getCandidateOwner(candidates[i]);
+
+            if (owner == masterNode_ && owner != address(0)) {
+                weight++;
+            }
+        }
+        return weight;
+    }
+
+    // it verifies whether the supplied arguments is owner in XDOPS or not
+    function isXDCValidatorCandidate(address masterNode_) public view returns (bool isValid) {
+        uint256 ownerCount = getGlobalSettings().xdcValidator.getOwnerCount();
+        for (uint256 i = 0; i < ownerCount; i++) {
+            address owner = getGlobalSettings().xdcValidator.owners(i);
+            if (owner == masterNode_) {
+                return true;
+            }
+        }
+        return false;
     }
 
     function isMasterNodeDelegatee(address delegatee_) public view returns (bool isValid) {
@@ -753,10 +795,11 @@ contract DaofinPlugin is BaseDaofinPlugin {
         return true;
     }
 
-    function getTotalNumberOfMN() public view returns (uint256, uint256) {
-        DaofinGlobalSettings memory _gs = getGlobalSettings();
-        return (_gs.xdcValidator.candidateCount(), _masterNodeDelegatee.numberOfJointMasterNodes);
-    }
+    // It's removed in V2 upgrade
+    // function getTotalNumberOfMN() public view returns (uint256, uint256) {
+    //     DaofinGlobalSettings memory _gs = getGlobalSettings();
+    //     return (_gs.xdcValidator.candidateCount(), _masterNodeDelegatee.numberOfJointMasterNodes);
+    // }
 
     function getXDCTotalSupply() public pure returns (uint256) {
         return 37705012699;
