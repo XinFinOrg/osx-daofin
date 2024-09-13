@@ -18,6 +18,8 @@ import {
   mineBlocksForExecutionDelay,
 } from '../../helpers/utils';
 import {
+  ADDRESS_ONE,
+  ADDRESS_TWO,
   JudiciaryCommittee,
   MasterNodeCommittee,
   PeoplesHouseCommittee,
@@ -72,15 +74,15 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
     MockTimestampOracle = new MockTimestampOracle__factory(Alice);
     mockTimestampOracle = await MockTimestampOracle.deploy();
-
-    xdcValidatorMock = await deployXDCValidator(Alice);
-
-    await xdcValidatorMock.addCandidate(Mike.address);
-    await xdcValidatorMock.addCandidate(Tony.address);
   });
   let proposalId: BigNumber;
   let electionIndex = BigNumber.from('0');
   beforeEach(async () => {
+    xdcValidatorMock = await deployXDCValidator(Alice);
+
+    await xdcValidatorMock.connect(Mike).addCandidate(ADDRESS_ONE);
+    await xdcValidatorMock.connect(Tony).addCandidate(ADDRESS_TWO);
+
     daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
     const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); // Math.floor(Date.now() / 1000);
 
@@ -125,10 +127,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       ],
       [
         BigNumber.from(now + 60 * 60 * 24 * 1),
-        BigNumber.from(now + 60 * 60 * 24 * 3),
-        BigNumber.from(now + 60 * 60 * 24 * 4),
-        BigNumber.from(now + 60 * 60 * 24 * 6),
-        BigNumber.from(now + 60 * 60 * 24 * 7),
         BigNumber.from(now + 60 * 60 * 24 * 9),
       ],
       [Bob.address, Ammy.address],
@@ -273,7 +271,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await daofinPlugin.connect(Beny).vote(proposalId, '2', false);
       await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
 
-      await advanceTime(ethers, convertDaysToSeconds(4));
+      await advanceTime(ethers, convertDaysToSeconds(8));
       const canExecute = await daofinPlugin.canExecute(proposalId);
 
       expect(canExecute).to.be.true;
@@ -288,6 +286,20 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       // ignore block delay
       // await mineBlocksForExecutionDelay(ethers, daofinPlugin);
+
+      const canExecute = await daofinPlugin.canExecute(proposalId);
+      expect(canExecute).to.be.false;
+    });
+    it('must not execute after deadline', async () => {
+      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+      await daofinPlugin.connect(Beny).vote(proposalId, '2', false);
+      await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
+      await daofinPlugin.connect(Ammy).vote(proposalId, '1', false);
+      await daofinPlugin.connect(Alpha).vote(proposalId, '1', false);
+      await daofinPlugin.connect(Proposer).vote(proposalId, '1', false);
+
+      // it goes after execution deadline
+      await advanceTime(ethers, convertDaysToSeconds(11));
 
       const canExecute = await daofinPlugin.canExecute(proposalId);
       expect(canExecute).to.be.false;

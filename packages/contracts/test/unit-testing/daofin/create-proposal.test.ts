@@ -116,9 +116,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       ],
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
-        BigNumber.from(now + 60 * 60 * 24 * 5),
-        BigNumber.from(now + 60 * 60 * 24 * 6),
-        BigNumber.from(now + 60 * 60 * 24 * 8),
+        BigNumber.from(now + 60 * 60 * 24 * 11),
       ],
       [Alice.address],
       '1',
@@ -155,8 +153,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       createPropsalParams = createProposalParams(
         '0x00',
         [],
-        '1',
-        '1',
+        '0',
+        '0',
         '0',
         '0'
       );
@@ -165,19 +163,20 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       const proposalId = await daofinPlugin.callStatic.createProposal(
         ...createPropsalParams
       );
+
       await expect(daofinPlugin.createProposal(...createPropsalParams)).to.not
         .reverted;
       expect(
         (await daofinPlugin.getProposal(proposalId)).proposalTypeId
-      ).to.be.eq('1');
+      ).to.be.eq('0');
       expect(await daofinPlugin.proposalCount()).to.be.eq('1');
     });
     it('proposalCost must be charged', async () => {
       createPropsalParams = createProposalParams(
         '0x00',
         [],
-        '1',
-        '1',
+        '0',
+        '0',
         '0',
         '0'
       );

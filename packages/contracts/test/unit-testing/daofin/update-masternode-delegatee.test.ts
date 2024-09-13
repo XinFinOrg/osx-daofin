@@ -68,8 +68,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     MockTimestampOracle = new MockTimestampOracle__factory(Alice);
     mockTimestampOracle = await MockTimestampOracle.deploy();
 
-    await xdcValidatorMock.addCandidate(Bob.address);
-    await xdcValidatorMock.addCandidate(Mike.address);
+    await xdcValidatorMock.connect(Bob).addCandidate(ADDRESS_ONE);
+    await xdcValidatorMock.connect(Mike).addCandidate(ADDRESS_TWO);
   });
 
   beforeEach(async () => {
@@ -122,7 +122,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       ],
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
-        BigNumber.from(now + 60 * 60 * 24 * 5),
+        BigNumber.from(now + 60 * 60 * 24 * 12),
       ],
       [Alice.address],
       parseEther('1'),
@@ -299,7 +299,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       const masterNode2 = Mike;
       const delegatee1 = John.address;
       const delegatee2 = Beny.address;
-      const delegatee3 = ADDRESS_TWO;
 
       await expect(
         daofinPlugin

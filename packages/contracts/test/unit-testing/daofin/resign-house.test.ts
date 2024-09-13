@@ -118,7 +118,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       ],
       [
         BigNumber.from(now + 60 * 60 * 24 * 1),
-        BigNumber.from(now + 60 * 60 * 24 * 3),
+        BigNumber.from(now + 60 * 60 * 24 * 9),
       ],
       [ADDRESS_ONE],
       parseEther('1'),

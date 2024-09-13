@@ -99,21 +99,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       ],
     ],
     [
-      // 1st
-      1724068800, // GMT: Monday, August 19, 2024 12:00:00 PM
-      1725278400, // GMT: Monday, September 2, 2024 12:00:00 PM
-
-      // 2nd
-      1726488000, //GMT: Monday, September 16, 2024 12:00:00 PM
-      1727697600, //GMT: Monday, September 30, 2024 12:00:00 PM
-
-      // 3rd
-      1728907200, //GMT: Monday, October 14, 2024 12:00:00 PM
-      1730376000, //GMT: Thursday, October 31, 2024 12:00:00 PM
-
-      // 4th
-      1734350400, //GMT: Monday, December 16, 2024 12:00:00 PM
-      1735560000, //GMT: Monday, December 30, 2024 12:00:00 PM
+      // 1725437700, // GMT: Wednesday, September 4, 2024 8:15:00 AM
+      // 1725441300, // GMT: Wednesday, September 4, 2024 9:15:00 AM
+      // // 1st
+      // 1724068800, // GMT: Monday, August 19, 2024 12:00:00 PM
+      // 1725278400, // GMT: Monday, September 2, 2024 12:00:00 PM
+      // // 2nd
+      // 1726488000, //GMT: Monday, September 16, 2024 12:00:00 PM
+      // 1727697600, //GMT: Monday, September 30, 2024 12:00:00 PM
+      // // 3rd
+      // 1728907200, //GMT: Monday, October 14, 2024 12:00:00 PM
+      // 1730376000, //GMT: Thursday, October 31, 2024 12:00:00 PM
+      // // 4th
+      // 1734350400, //GMT: Monday, December 16, 2024 12:00:00 PM
+      // 1735560000, //GMT: Monday, December 30, 2024 12:00:00 PM
     ],
     daoParams.judiciaryList,
     parseEther('1'),
@@ -148,6 +147,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     daoAddress,
     hexToBytes(encodePlugin(params, METADATA))
   );
+  console.log({staticCall});
+
   const tx = await daofinFactoryContract.prepareInstallation(
     daoAddress,
     hexToBytes(encodePlugin(params, METADATA))

@@ -123,10 +123,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         ],
         [
           BigNumber.from(now + 60 * 60 * 24 * 1),
-          BigNumber.from(now + 60 * 60 * 24 * 3),
-          BigNumber.from(now + 60 * 60 * 24 * 4),
-          BigNumber.from(now + 60 * 60 * 24 * 6),
-          BigNumber.from(now + 60 * 60 * 24 * 7),
           BigNumber.from(now + 60 * 60 * 24 * 9),
         ],
         [Bob.address],

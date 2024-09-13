@@ -473,6 +473,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
             if (_members[i] == address(0)) revert AddressIsZero();
             if (isJudiciaryMember(_members[i])) revert JudiciaryExist();
             if (isPeopleHouse(_members[i])) revert InValidAddress();
+            if (isMasterNodeDelegatee(_members[i])) revert InValidAddress();
             if (isXDCValidatorCandidate(_members[i])) revert InValidAddress();
 
             _judiciaryCommitteeCount++;
@@ -703,7 +704,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
         address masterNode = _masterNodeDelegatee.delegateeToMasterNode[delegatee_];
         if (masterNode == address(0)) return false;
 
-        if (!isXDCValidatorCandidate(masterNode)) return false;
+        // if (!isXDCValidatorCandidate(masterNode)) return false;
 
         return true;
     }

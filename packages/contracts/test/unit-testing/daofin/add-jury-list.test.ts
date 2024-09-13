@@ -38,7 +38,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let DaofinPlugin: DaofinPlugin__factory;
   let daofinPlugin: DaofinPlugin;
   let initializeParams: Parameters<DaofinPlugin['initialize']>;
-  let createPropsalParams: Parameters<DaofinPlugin['createProposal']>;
   let Alice: SignerWithAddress;
   let Bob: SignerWithAddress;
   let Mike: SignerWithAddress;
@@ -114,10 +113,10 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       ],
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
-        BigNumber.from(now + 60 * 60 * 24 * 5),
+        BigNumber.from(now + 60 * 60 * 24 * 11),
       ],
       [Alice.address],
-      parseEther('1'),
+      '1',
     ];
     await daofinPlugin.initialize(...initializeParams);
   });
@@ -132,7 +131,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       await dao.grant(
         daofinPlugin.address,
-        Alice.address,
+        daoTreasury.address,
         UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
       );
       await expect(

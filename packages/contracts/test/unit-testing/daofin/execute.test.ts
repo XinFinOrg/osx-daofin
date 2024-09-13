@@ -18,6 +18,8 @@ import {
   mineBlocksForExecutionDelay,
 } from '../../helpers/utils';
 import {
+  ADDRESS_ONE,
+  ADDRESS_TWO,
   EXECUTE_PERMISSION_ID,
   JudiciaryCommittee,
   MasterNodeCommittee,
@@ -65,8 +67,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     const RatioTest = new RatioTest__factory(Alice);
     ratio = await RatioTest.deploy();
 
-    xdcValidatorMock = await deployXDCValidator(Alice);
-
     DaofinPlugin = new DaofinPlugin__factory(Alice);
     MockTimestampOracle = new MockTimestampOracle__factory(Alice);
     mockTimestampOracle = await MockTimestampOracle.deploy();
@@ -75,6 +75,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let electionIndex = BigNumber.from('0');
   describe('Execute', async () => {
     beforeEach(async () => {
+      xdcValidatorMock = await deployXDCValidator(Alice);
+
       daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
       const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); //Math.floor(Date.now() / 1000);
 
@@ -119,10 +121,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         ],
         [
           BigNumber.from(now + 60 * 60 * 24 * 1),
-          BigNumber.from(now + 60 * 60 * 24 * 3),
-          BigNumber.from(now + 60 * 60 * 24 * 4),
-          BigNumber.from(now + 60 * 60 * 24 * 6),
-          BigNumber.from(now + 60 * 60 * 24 * 7),
           BigNumber.from(now + 60 * 60 * 24 * 9),
         ],
         [Bob.address],
@@ -154,7 +152,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       );
       await proposalTx.wait();
 
-      await xdcValidatorMock.addCandidate(Mike.address);
+      await xdcValidatorMock.connect(Mike).addCandidate(ADDRESS_ONE);
       await daofinPlugin
         .connect(Mike)
         .updateOrJoinMasterNodeDelegatee(John.address);
@@ -178,7 +176,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
 
-      await advanceTime(ethers, convertDaysToSeconds(2));
+      await advanceTime(ethers, convertDaysToSeconds(8));
 
       await expect(daofinPlugin.execute(proposalId)).to.not.reverted;
     });
@@ -194,6 +192,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   });
   describe('Execute only for Jury', async () => {
     beforeEach(async () => {
+      xdcValidatorMock = await deployXDCValidator(Alice);
+
       daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
       const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); //Math.floor(Date.now() / 1000);
       xdcValidatorMock = await deployXDCValidator(Alice);
@@ -234,10 +234,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         ],
         [
           BigNumber.from(now + 60 * 60 * 24 * 1),
-          BigNumber.from(now + 60 * 60 * 24 * 3),
-          BigNumber.from(now + 60 * 60 * 24 * 4),
-          BigNumber.from(now + 60 * 60 * 24 * 6),
-          BigNumber.from(now + 60 * 60 * 24 * 7),
           BigNumber.from(now + 60 * 60 * 24 * 9),
         ],
         [Bob.address, Mike.address, Alice.address, John.address],
@@ -280,7 +276,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
       await daofinPlugin.connect(Mike).vote(proposalId, '2', false);
 
-      await advanceTime(ethers, convertDaysToSeconds(4));
+      await advanceTime(ethers, convertDaysToSeconds(8));
 
       await expect(daofinPlugin.execute(proposalId)).not.reverted;
     });
@@ -292,15 +288,15 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await daofinPlugin.connect(Alice).vote(proposalId, '1', false);
       await daofinPlugin.connect(Mike).vote(proposalId, '3', false);
 
-      await advanceTime(ethers, convertDaysToSeconds(4));
+      await advanceTime(ethers, convertDaysToSeconds(8));
 
       await expect(daofinPlugin.execute(proposalId)).reverted;
     });
   });
   describe('Execute only for Senate', async () => {
     beforeEach(async () => {
-      daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
       xdcValidatorMock = await deployXDCValidator(Alice);
+      daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
       const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); //Math.floor(Date.now() / 1000);
 
       initializeParams = [
@@ -339,10 +335,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         ],
         [
           BigNumber.from(now + 60 * 60 * 24 * 1),
-          BigNumber.from(now + 60 * 60 * 24 * 3),
-          BigNumber.from(now + 60 * 60 * 24 * 4),
-          BigNumber.from(now + 60 * 60 * 24 * 6),
-          BigNumber.from(now + 60 * 60 * 24 * 7),
           BigNumber.from(now + 60 * 60 * 24 * 9),
         ],
         [Bob.address, Alice.address],
@@ -372,12 +364,12 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       );
       await proposalTx.wait();
 
-      await xdcValidatorMock.addCandidate(Mike.address);
+      await xdcValidatorMock.connect(Mike).addCandidate(ADDRESS_ONE);
       await daofinPlugin
         .connect(Mike)
         .updateOrJoinMasterNodeDelegatee(John.address);
 
-      await xdcValidatorMock.addCandidate(Beny.address);
+      await xdcValidatorMock.connect(Beny).addCandidate(ADDRESS_TWO);
       await daofinPlugin
         .connect(Beny)
         .updateOrJoinMasterNodeDelegatee(Tony.address);
@@ -391,9 +383,9 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       await daofinPlugin.connect(John).vote(proposalId, '2', false);
 
-      await advanceTime(ethers, convertDaysToSeconds(4));
+      await advanceTime(ethers, convertDaysToSeconds(8));
 
-      await expect(daofinPlugin.execute(proposalId)).not.reverted;
+      await expect(daofinPlugin.execute(proposalId)).not.be.reverted;
     });
     it('must not be able to execute due to lack of YES votes', async () => {
       await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
@@ -401,7 +393,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       await daofinPlugin.connect(Tony).vote(proposalId, '1', false);
       await daofinPlugin.connect(John).vote(proposalId, '3', false);
 
-      await advanceTime(ethers, convertDaysToSeconds(4));
+      await advanceTime(ethers, convertDaysToSeconds(8));
 
       await expect(daofinPlugin.execute(proposalId)).reverted;
     });

@@ -255,7 +255,7 @@ interface Data {
 
 // Function to read JSON file
 export function readJsonFile(
-  filePath: string = 'deployments.json'
+  filePath: string = 'deployments-staging.json'
 ): Data | null {
   try {
     const data = fs.readFileSync(filePath, 'utf-8');
@@ -271,7 +271,7 @@ export function readJsonFile(
 export function writeJsonFile(data: Data): void {
   try {
     fs.writeFileSync(
-      'deployments.json',
+      'deployments-staging.json',
       JSON.stringify(data, null, 2),
       'utf-8'
     );

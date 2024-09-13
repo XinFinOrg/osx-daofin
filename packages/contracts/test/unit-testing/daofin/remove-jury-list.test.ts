@@ -2,6 +2,8 @@ import {DaofinPluginSetupParams} from '../../../plugin-settings';
 import {
   DaofinPlugin,
   DaofinPlugin__factory,
+  MockTimestampOracle,
+  MockTimestampOracle__factory,
   XDCValidator,
 } from '../../../typechain';
 import {deployWithProxy} from '../../../utils/helpers';
@@ -45,6 +47,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let Beny: SignerWithAddress;
   let xdcValidatorMock: XDCValidator;
   let ratio: RatioTest;
+  let MockTimestampOracle: MockTimestampOracle__factory;
+  let mockTimestampOracle: MockTimestampOracle;
   before(async () => {
     signers = await ethers.getSigners();
     Alice = signers[0];
@@ -60,12 +64,15 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     const RatioTest = new RatioTest__factory(Alice);
     ratio = await RatioTest.deploy();
 
+    MockTimestampOracle = new MockTimestampOracle__factory(Alice);
+    mockTimestampOracle = await MockTimestampOracle.deploy();
+
     xdcValidatorMock = await deployXDCValidator(Alice);
   });
 
   beforeEach(async () => {
     daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
-    const now = Math.floor(new Date().getTime() / 1000);
+    const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber();
 
     initializeParams = [
       dao.address,
@@ -112,8 +119,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         ),
       ],
       [
-        BigNumber.from(now + 60 * 60 * 24 * 3),
-        BigNumber.from(now + 60 * 60 * 24 * 5),
+        BigNumber.from(now + 60 * 60 * 24 * 1),
+        BigNumber.from(now + 60 * 60 * 24 * 9),
       ],
       [Bob.address],
       parseEther('1'),
