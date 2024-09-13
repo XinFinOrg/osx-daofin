@@ -385,7 +385,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       await advanceTime(ethers, convertDaysToSeconds(8));
 
-      await expect(daofinPlugin.execute(proposalId)).not.be.reverted;
+      await expect(daofinPlugin.execute(proposalId)).not.reverted;
     });
     it('must not be able to execute due to lack of YES votes', async () => {
       await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);

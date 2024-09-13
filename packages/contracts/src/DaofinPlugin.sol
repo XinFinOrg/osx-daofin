@@ -585,7 +585,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
                 _masterNodeDelegatee.numberOfJointMasterNodes--;
             }
 
-            mnToWeights[masterNode_] = getMnWeight(masterNode_);
+            mnToWeights[delegatee] = getMnWeight(masterNode_);
 
             emit MnSynced(masterNode_);
             return true;
