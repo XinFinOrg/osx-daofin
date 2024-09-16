@@ -148,6 +148,17 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       const snapshotAfter = await daofinPlugin.masternodeCountSnapshot();
       expect(snapshotAfter).be.eq(BigNumber.from('4'));
     });
+    it('must revert if its within voting period', async () => {
+      await advanceTime(ethers, convertDaysToSeconds(4));
+      const snapshotBefore = await daofinPlugin.masternodeCountSnapshot();
+
+      await xdcValidatorMock.connect(John).addCandidate(ADDRESS_ONE);
+      await xdcValidatorMock.connect(John).addCandidate(ADDRESS_TWO);
+      await xdcValidatorMock.connect(John).addCandidate(Bob.address);
+      await xdcValidatorMock.connect(Mike).addCandidate(Alice.address);
+
+      await expect(daofinPlugin.syncXdcValidatorSnapshot()).be.reverted;
+    });
   });
 
   describe('Validator getWeight()', async () => {
@@ -233,6 +244,29 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       const weightAfter = await daofinPlugin.mnToWeights(Bob.address);
 
       expect(weightAfter).be.eq(2);
+    });
+
+    it('must revert if its within voting period', async () => {
+      await xdcValidatorMock.connect(John).addCandidate(ADDRESS_ONE);
+
+      await daofinPlugin
+        .connect(John)
+        .updateOrJoinMasterNodeDelegatee(Bob.address);
+
+      const weightBefore = await daofinPlugin.mnToWeights(Bob.address);
+      expect(weightBefore).be.eq(1);
+      await xdcValidatorMock.connect(John).addCandidate(ADDRESS_TWO);
+
+      await advanceTime(ethers, convertDaysToSeconds(4));
+
+      // no change happened, its reverted.
+      await expect(daofinPlugin.syncWithXdcValidator(John.address)).be.reverted;
+
+      expect(await daofinPlugin.isMasterNodeDelegatee(Bob.address)).be.true;
+
+      const weightAfter = await daofinPlugin.mnToWeights(Bob.address);
+
+      expect(weightAfter).be.eq(1);
     });
   });
 });

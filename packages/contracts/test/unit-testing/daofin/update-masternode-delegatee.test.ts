@@ -251,7 +251,31 @@ describe(PLUGIN_CONTRACT_NAME, function () {
           .updateOrJoinMasterNodeDelegatee(newDelegatee)
       ).not.reverted;
     });
+    it('master node updates delegate, and remove the previous delegate, also in mnToWeight mapping', async () => {
+      const masterNode1 = Bob;
+      const delegatee1 = John.address;
+      const delegatee2 = Beny.address;
 
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee1)
+      ).not.reverted;
+
+      expect(await daofinPlugin.isMasterNodeDelegatee(delegatee1)).be.true;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee2)
+      ).not.reverted;
+
+      expect(await daofinPlugin.isMasterNodeDelegatee(delegatee1)).be.false;
+      expect(await daofinPlugin.isMasterNodeDelegatee(delegatee2)).be.true;
+
+      expect((await daofinPlugin.mnToWeights(delegatee2)).toNumber()).equal(1);
+      expect((await daofinPlugin.mnToWeights(delegatee1)).toNumber()).equal(0);
+    });
     it('M1 -> D1, M2->D2 ', async () => {
       const masterNode1 = Bob;
       const masterNode2 = Mike;
@@ -294,7 +318,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
           .updateOrJoinMasterNodeDelegatee(delegatee3)
       ).not.reverted;
     });
-    it('M1 -> D1, M2->D2, !M1->D2 ', async () => {
+    it('M1 -> D1, M2->D2, !M1->D2, !M2->D2 ', async () => {
       const masterNode1 = Bob;
       const masterNode2 = Mike;
       const delegatee1 = John.address;

@@ -18,6 +18,7 @@ import {
 } from '../../../helpers/utils';
 import {
   ADDRESS_ONE,
+  ADDRESS_THREE,
   ADDRESS_TWO,
   JudiciaryCommittee,
   MasterNodeCommittee,
@@ -229,6 +230,29 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       expect(info.voted).to.be.true;
       expect(info.voted).not.be.false;
       expect(info.option).be.eq(voteOption);
+    });
+    it('MasterNode weight must be same as its voting power', async () => {
+      const voter = John;
+
+      const voteOption: VoteOption = VoteOption.Yes;
+
+      await xdcValidatorMock.connect(Mike).addCandidate(ADDRESS_THREE);
+
+      const voteTx = await daofinPlugin
+        .connect(voter)
+        .vote(proposalId, voteOption, false);
+      await voteTx.wait();
+
+      await expect(
+        daofinPlugin.connect(voter).vote(proposalId, voteOption, false)
+      ).be.reverted;
+
+      const tallyAfter = await daofinPlugin.getProposalTallyDetails(
+        proposalId,
+        MasterNodeCommittee
+      );
+
+      expect(tallyAfter.yes).be.eq(2);
     });
   });
 });

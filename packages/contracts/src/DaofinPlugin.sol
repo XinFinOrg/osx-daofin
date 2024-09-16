@@ -63,7 +63,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
     // ----------------
     // UPDATED - 1
 
-    // plugin delegate => Mn owner weight
+    // MN's delegate => Mn owner weight in xdcValidator
     mapping(address => uint256) public mnToWeights;
 
     // initialize function executes during the plugin setup
@@ -585,6 +585,7 @@ contract DaofinPlugin is BaseDaofinPlugin {
                 _masterNodeDelegatee.numberOfJointMasterNodes--;
             }
 
+            // update voting weights
             mnToWeights[delegatee] = getMnWeight(masterNode_);
 
             emit MnSynced(masterNode_);
@@ -616,10 +617,16 @@ contract DaofinPlugin is BaseDaofinPlugin {
         if (_cachedDelegatee == address(0) && _cachedMasterNode == address(0)) {
             _masterNodeDelegatee.numberOfJointMasterNodes++;
         }
-        mnToWeights[delegatee_] = getMnWeight(masterNode_);
+        if (_cachedDelegatee != address(0) && _cachedDelegatee != delegatee_) {
+            // remove previous
+            delete _masterNodeDelegatee.masterNodeToDelegatee[_cachedMasterNode];
+            delete _masterNodeDelegatee.delegateeToMasterNode[_cachedDelegatee];
+            delete mnToWeights[_cachedDelegatee];
+        }
         // stores on reverse mappings for ease of accessibilities
         _masterNodeDelegatee.masterNodeToDelegatee[masterNode_] = delegatee_;
         _masterNodeDelegatee.delegateeToMasterNode[delegatee_] = masterNode_;
+        mnToWeights[delegatee_] = getMnWeight(masterNode_);
     }
 
     function updateProposalCosts(
