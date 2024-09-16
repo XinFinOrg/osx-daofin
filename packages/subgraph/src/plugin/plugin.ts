@@ -24,6 +24,8 @@ import {
   ProposalExecuted,
   ElectionPeriodUpdated,
   UpdateElectionPeriodCall,
+  HouseResignRequested,
+  HouseResigned,
 } from '../../generated/templates/DaofinPlugin/DaofinPlugin';
 import {
   getDepositId,
@@ -32,7 +34,7 @@ import {
   getPluginProposalVoteId,
   getProposalId,
 } from '../../utils/proposals';
-import {Address, BigInt, dataSource} from '@graphprotocol/graph-ts';
+import {Address, BigInt, dataSource, store} from '@graphprotocol/graph-ts';
 
 export function handleProposalCreated(event: ProposalCreated): void {
   let context = dataSource.context();
@@ -84,31 +86,34 @@ export function handleProposalCreated(event: ProposalCreated): void {
 export function handleDeposited(event: Deposited): void {
   let context = dataSource.context();
   let daoId = context.getString('daoAddress');
-  const depositId = getDepositId(
-    event.transaction.from,
-    Address.fromString(daoId),
-    event.block.number
-  );
-  const plugin = event.transaction.to;
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  if (!pluginInstallationId) return;
+
+  let plugin = Plugin.load(pluginInstallationId);
   if (!plugin) {
     return;
   }
-  let pluginInstallationId = getPluginInstallationId(
-    Address.fromString(daoId.toString()),
-    plugin
-  );
+
+  const depositId = getDepositId(event.transaction.from, pluginInstallationId);
+
   let entity = PluginDeposit.load(depositId);
   if (!entity) {
     entity = new PluginDeposit(depositId);
   }
-  entity.amount = event.params._amount;
+  if (entity.get('amount') == null) {
+    entity.amount = event.params._amount;
+  } else {
+    entity.amount = entity.amount.plus(event.params._amount);
+  }
   entity.voter = event.params._depositer;
   entity.snapshotBlock = event.block.number;
   entity.txHash = event.transaction.hash;
   entity.depositDate = event.block.timestamp;
   entity.dao = daoId;
+  entity.isActive = true;
+
   if (pluginInstallationId) {
-    entity.plugin = pluginInstallationId.toHexString();
+    entity.plugin = pluginInstallationId;
   }
   entity.save();
 }
@@ -222,7 +227,7 @@ export function handleVoteReceived(event: VoteReceived): void {
   entity.option = event.params._voteOption;
   entity.txHash = event.transaction.hash;
   entity.snapshotBlock = event.block.number;
-  entity.proposal = pluginProposal.pluginProposalId.toHexString();
+  entity.proposal = pluginProposal.id;
 
   entity.save();
 }
@@ -243,26 +248,31 @@ export function handleProposalTypeCreated(event: ProposalTypeCreated): void {
 
   let pluginProposalType = PluginProposalType.load(subgraphId);
 
-  if (pluginProposalType) return;
+  if (!pluginProposalType) {
+    pluginProposalType = new PluginProposalType(subgraphId);
 
-  pluginProposalType = new PluginProposalType(subgraphId);
+    pluginProposalType.txHash = event.transaction.hash;
+    pluginProposalType.creationDate = event.block.timestamp;
+    pluginProposalType.plugin = plugin.id;
+    pluginProposalType.proposalTypeId = pluginProposalTypeId.toString();
 
-  pluginProposalType.txHash = event.transaction.hash;
-  pluginProposalType.creationDate = event.block.timestamp;
-  pluginProposalType.plugin = plugin.id;
-  pluginProposalType.proposalTypeId = pluginProposalTypeId;
-
-  pluginProposalType.save();
+    pluginProposalType.save();
+  }
 
   for (let i = 0; i < event.params._settings.length; i++) {
     let item = event.params._settings[i];
 
-    let setting = new CommitteeVotingSettings(
+    let setting = CommitteeVotingSettings.load(
       subgraphId.concat(item.name.toHexString())
     );
+    if (!setting) {
+      setting = new CommitteeVotingSettings(
+        subgraphId.concat(item.name.toHexString())
+      );
+    }
+
     setting.name = item.name;
     setting.minParticipation = item.minParticipation;
-    setting.minVotingPower = item.minVotingPower;
     setting.supportThreshold = item.supportThreshold;
     setting.proposalType = subgraphId;
 
@@ -291,14 +301,14 @@ export function handleProposalIdToProposalTypeIdAttached(
   let proposalId = getProposalId(pluginAddress, event.params._proposalId);
 
   let pluginProposalType = PluginProposalType.load(
-    proposalId.concat(pluginProposalTypeId)
+    pluginInstallationId.concat(pluginProposalTypeId)
   );
   if (!pluginProposalType) return;
 
   let entity = PluginProposal.load(proposalId);
   if (!entity) return;
 
-  entity.proposalType = proposalId.concat(pluginProposalTypeId);
+  entity.proposalType = pluginInstallationId.concat(pluginProposalTypeId);
   entity.save();
 }
 export function handleProposalExecuted(event: ProposalExecuted): void {
@@ -357,4 +367,53 @@ export function handleElectionPeriodUpdated(
   electionSchema.plugin = plugin.id;
 
   electionSchema.save();
+}
+export function handleHouseResignRequested(event: HouseResignRequested): void {
+  let context = dataSource.context();
+
+  let daoId = context.getString('daoAddress');
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  if (!pluginInstallationId) return;
+
+  let dao = Dao.load(daoId.toString());
+  if (!dao) return;
+
+  let plugin = Plugin.load(pluginInstallationId);
+  if (!plugin) return;
+
+  const depositId = getDepositId(event.transaction.from, pluginInstallationId);
+  let entity = PluginDeposit.load(depositId);
+  if (!entity) return;
+
+  entity.isActive = false;
+
+  entity.amount = event.params._amount;
+  entity.startOfCooldownPeriod = event.block.timestamp;
+  entity.endOfCooldownPeriod = event.params._cooldown;
+  entity.requestToResignTimestamp = event.block.timestamp;
+  entity.requestToResignTxHash = event.transaction.hash;
+
+  entity.save();
+}
+export function handleHouseResigned(event: HouseResigned): void {
+  let context = dataSource.context();
+
+  let daoId = context.getString('daoAddress');
+  let pluginInstallationId = context.getString('pluginInstallationId');
+  if (!pluginInstallationId) return;
+
+  let dao = Dao.load(daoId.toString());
+  if (!dao) return;
+
+  let plugin = Plugin.load(pluginInstallationId);
+  if (!plugin) return;
+
+  const depositId = getDepositId(event.transaction.from, pluginInstallationId);
+  let entity = PluginDeposit.load(depositId);
+  if (!entity) return;
+  store.remove('PluginDeposit', depositId);
+  // entity.claimTimestamp = event.block.timestamp;
+  // entity.claimTxHash = event.transaction.hash;
+
+  // entity.save();
 }

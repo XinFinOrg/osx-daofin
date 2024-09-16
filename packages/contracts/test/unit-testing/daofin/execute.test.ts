@@ -15,8 +15,11 @@ import {
   convertDaysToSeconds,
   createCommitteeVotingSettings,
   createProposalParams,
+  mineBlocksForExecutionDelay,
 } from '../../helpers/utils';
 import {
+  ADDRESS_ONE,
+  ADDRESS_TWO,
   EXECUTE_PERMISSION_ID,
   JudiciaryCommittee,
   MasterNodeCommittee,
@@ -64,8 +67,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     const RatioTest = new RatioTest__factory(Alice);
     ratio = await RatioTest.deploy();
 
-    xdcValidatorMock = await deployXDCValidator(Alice);
-
     DaofinPlugin = new DaofinPlugin__factory(Alice);
     MockTimestampOracle = new MockTimestampOracle__factory(Alice);
     mockTimestampOracle = await MockTimestampOracle.deploy();
@@ -74,6 +75,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let electionIndex = BigNumber.from('0');
   describe('Execute', async () => {
     beforeEach(async () => {
+      xdcValidatorMock = await deployXDCValidator(Alice);
+
       daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
       const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); //Math.floor(Date.now() / 1000);
 
@@ -118,13 +121,122 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         ],
         [
           BigNumber.from(now + 60 * 60 * 24 * 1),
-          BigNumber.from(now + 60 * 60 * 24 * 3),
-          BigNumber.from(now + 60 * 60 * 24 * 4),
-          BigNumber.from(now + 60 * 60 * 24 * 6),
-          BigNumber.from(now + 60 * 60 * 24 * 7),
           BigNumber.from(now + 60 * 60 * 24 * 9),
         ],
         [Bob.address],
+        '1',
+      ];
+
+      (await daofinPlugin.initialize(...initializeParams)).wait();
+
+      await daofinPlugin.joinHouse({value: parseEther('1')});
+
+      createPropsalParams = createProposalParams(
+        '0x00',
+        [],
+        electionIndex,
+        '0',
+        '0',
+        '0'
+      );
+      createPropsalParams[6] = {
+        value: '1',
+      };
+
+      proposalId = await daofinPlugin.callStatic.createProposal(
+        ...createPropsalParams
+      );
+
+      const proposalTx = await daofinPlugin.createProposal(
+        ...createPropsalParams
+      );
+      await proposalTx.wait();
+
+      await xdcValidatorMock.connect(Mike).addCandidate(ADDRESS_ONE);
+      await daofinPlugin
+        .connect(Mike)
+        .updateOrJoinMasterNodeDelegatee(John.address);
+
+      await advanceTime(ethers, convertDaysToSeconds(2));
+    });
+    it('must not be able to execute', async () => {
+      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+      await daofinPlugin.connect(John).vote(proposalId, '2', false);
+      await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
+
+      // Not giving right permission
+      // await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
+
+      await expect(daofinPlugin.execute(proposalId)).to.reverted;
+    });
+    it('must execute', async () => {
+      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+      await daofinPlugin.connect(John).vote(proposalId, '2', false);
+      await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
+
+      await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
+
+      await advanceTime(ethers, convertDaysToSeconds(8));
+
+      await expect(daofinPlugin.execute(proposalId)).to.not.reverted;
+    });
+    it('must not be able to execute(no enough votes)', async () => {
+      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+      await daofinPlugin.connect(John).vote(proposalId, '1', false);
+      await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
+
+      await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
+
+      await expect(daofinPlugin.execute(proposalId)).to.reverted;
+    });
+  });
+  describe('Execute only for Jury', async () => {
+    beforeEach(async () => {
+      xdcValidatorMock = await deployXDCValidator(Alice);
+
+      daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
+      const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); //Math.floor(Date.now() / 1000);
+      xdcValidatorMock = await deployXDCValidator(Alice);
+
+      initializeParams = [
+        dao.address,
+        parseEther('1'),
+        xdcValidatorMock.address,
+        [
+          createCommitteeVotingSettings(MasterNodeCommittee, '0', '0', '1'),
+          createCommitteeVotingSettings(PeoplesHouseCommittee, '0', '0', '1'),
+          createCommitteeVotingSettings(
+            JudiciaryCommittee,
+            '500000',
+            '400000',
+            '1'
+          ),
+        ],
+        [
+          createCommitteeVotingSettings(
+            MasterNodeCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+          createCommitteeVotingSettings(
+            PeoplesHouseCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+          createCommitteeVotingSettings(
+            JudiciaryCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+        ],
+        [
+          BigNumber.from(now + 60 * 60 * 24 * 1),
+          BigNumber.from(now + 60 * 60 * 24 * 9),
+        ],
+        [Bob.address, Mike.address, Alice.address, John.address],
         '1',
       ];
 
@@ -151,41 +263,139 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       );
       await proposalTx.wait();
 
-      await xdcValidatorMock.addCandidate(Mike.address);
+      await advanceTime(ethers, convertDaysToSeconds(2));
+    });
+    it('must be able to execute', async () => {
+      await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
+
+      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+
+      await expect(daofinPlugin.execute(proposalId)).reverted;
+
+      await daofinPlugin.connect(John).vote(proposalId, '2', false);
+      await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
+      await daofinPlugin.connect(Mike).vote(proposalId, '2', false);
+
+      await advanceTime(ethers, convertDaysToSeconds(8));
+
+      await expect(daofinPlugin.execute(proposalId)).not.reverted;
+    });
+    it('must not be able to execute due to lack of YES votes', async () => {
+      await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
+
+      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
+      await daofinPlugin.connect(John).vote(proposalId, '1', false);
+      await daofinPlugin.connect(Alice).vote(proposalId, '1', false);
+      await daofinPlugin.connect(Mike).vote(proposalId, '3', false);
+
+      await advanceTime(ethers, convertDaysToSeconds(8));
+
+      await expect(daofinPlugin.execute(proposalId)).reverted;
+    });
+  });
+  describe('Execute only for Senate', async () => {
+    beforeEach(async () => {
+      xdcValidatorMock = await deployXDCValidator(Alice);
+      daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
+      const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); //Math.floor(Date.now() / 1000);
+
+      initializeParams = [
+        dao.address,
+        parseEther('1'),
+        xdcValidatorMock.address,
+        [
+          createCommitteeVotingSettings(
+            MasterNodeCommittee,
+            '500000',
+            '500000',
+            '1'
+          ),
+          createCommitteeVotingSettings(PeoplesHouseCommittee, '0', '0', '1'),
+          createCommitteeVotingSettings(JudiciaryCommittee, '0', '0', '1'),
+        ],
+        [
+          createCommitteeVotingSettings(
+            MasterNodeCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+          createCommitteeVotingSettings(
+            PeoplesHouseCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+          createCommitteeVotingSettings(
+            JudiciaryCommittee,
+            '100000',
+            '100000',
+            parseEther('1')
+          ),
+        ],
+        [
+          BigNumber.from(now + 60 * 60 * 24 * 1),
+          BigNumber.from(now + 60 * 60 * 24 * 9),
+        ],
+        [Bob.address, Alice.address],
+        '1',
+      ];
+
+      (await daofinPlugin.initialize(...initializeParams)).wait();
+
+      createPropsalParams = createProposalParams(
+        '0x00',
+        [],
+        electionIndex,
+        '0',
+        '0',
+        '0'
+      );
+      createPropsalParams[6] = {
+        value: '1',
+      };
+
+      proposalId = await daofinPlugin.callStatic.createProposal(
+        ...createPropsalParams
+      );
+
+      const proposalTx = await daofinPlugin.createProposal(
+        ...createPropsalParams
+      );
+      await proposalTx.wait();
+
+      await xdcValidatorMock.connect(Mike).addCandidate(ADDRESS_ONE);
       await daofinPlugin
         .connect(Mike)
         .updateOrJoinMasterNodeDelegatee(John.address);
-      await daofinPlugin.connect(Alice).joinHouse({value: parseEther('1')});
+
+      await xdcValidatorMock.connect(Beny).addCandidate(ADDRESS_TWO);
+      await daofinPlugin
+        .connect(Beny)
+        .updateOrJoinMasterNodeDelegatee(Tony.address);
 
       await advanceTime(ethers, convertDaysToSeconds(2));
     });
-    it('must not be able to execute', async () => {
-      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
-      await daofinPlugin.connect(John).vote(proposalId, '2', false);
-      await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
-
-      // Not giving right permission
-      // await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
-
-      await expect(daofinPlugin.execute(proposalId)).to.reverted;
-    });
-    it('must execute', async () => {
-      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
-      await daofinPlugin.connect(John).vote(proposalId, '2', false);
-      await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
-
+    it('must be able to execute', async () => {
       await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
 
-      await expect(daofinPlugin.execute(proposalId)).to.not.reverted;
-    });
-    it('must not be able to execute(no enough votes)', async () => {
-      await daofinPlugin.connect(Bob).vote(proposalId, '2', false);
-      await daofinPlugin.connect(John).vote(proposalId, '1', false);
-      await daofinPlugin.connect(Alice).vote(proposalId, '2', false);
+      await daofinPlugin.connect(Tony).vote(proposalId, '2', false);
 
+      await daofinPlugin.connect(John).vote(proposalId, '2', false);
+
+      await advanceTime(ethers, convertDaysToSeconds(8));
+
+      await expect(daofinPlugin.execute(proposalId)).not.reverted;
+    });
+    it('must not be able to execute due to lack of YES votes', async () => {
       await dao.grant(dao.address, daofinPlugin.address, EXECUTE_PERMISSION_ID);
 
-      await expect(daofinPlugin.execute(proposalId)).to.reverted;
+      await daofinPlugin.connect(Tony).vote(proposalId, '1', false);
+      await daofinPlugin.connect(John).vote(proposalId, '3', false);
+
+      await advanceTime(ethers, convertDaysToSeconds(8));
+
+      await expect(daofinPlugin.execute(proposalId)).reverted;
     });
   });
 });

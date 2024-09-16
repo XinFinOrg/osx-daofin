@@ -122,23 +122,21 @@ describe(PLUGIN_CONTRACT_NAME, function () {
           ),
         ],
         [
-          BigNumber.from(now + 60 * 60 * 24 * 1),
-          BigNumber.from(now + 60 * 60 * 24 * 3),
-          BigNumber.from(now + 60 * 60 * 24 * 4),
-          BigNumber.from(now + 60 * 60 * 24 * 6),
-          BigNumber.from(now + 60 * 60 * 24 * 7),
+          BigNumber.from(now + 60 * 60 * 24),
           BigNumber.from(now + 60 * 60 * 24 * 9),
         ],
-        [Bob.address],
+        [Bob.address, Proposer.address],
         '1',
       ];
 
       (await daofinPlugin.initialize(...initializeParams)).wait();
 
+      await daofinPlugin.connect(Alice).joinHouse({value: parseEther('1')});
+
       createPropsalParams = createProposalParams(
         '0x00',
         [],
-        electionIndex,
+        '0',
         '0',
         '0',
         '0'
@@ -155,7 +153,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         ...createPropsalParams
       );
       await proposalTx.wait();
-      await daofinPlugin.connect(Alice).joinHouse({value: parseEther('1')});
 
       await advanceTime(ethers, convertDaysToSeconds(2));
     });
@@ -175,11 +172,14 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         voteCommittee
       );
 
-      expect(tallyAfter.no.toString()).not.be.eq(parseEther('1').toString());
-      expect(tallyAfter.no.toString()).be.eq(parseEther('0').toString());
+      expect(tallyAfter.no.toString()).not.be.eq(BigInt('1').toString());
+      expect(tallyAfter.no.toString()).be.eq(BigInt('0').toString());
 
-      expect(tallyAfter.yes.toString()).not.be.eq(parseEther('0').toString());
-      expect(tallyAfter.yes.toString()).be.eq(parseEther('1').toString());
+      expect(tallyAfter.yes.toString()).not.be.eq(BigInt('0').toString());
+      expect(tallyAfter.yes.toString()).be.eq(BigInt('1').toString());
+
+      expect(tallyAfter.abstain.toString()).not.be.eq(BigInt('1').toString());
+      expect(tallyAfter.abstain.toString()).be.eq(BigInt('0').toString());
     });
     it('People: must record voter address', async () => {
       const voter = Alice;

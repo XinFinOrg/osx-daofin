@@ -17,6 +17,9 @@ import {
   createProposalParams,
 } from '../../../helpers/utils';
 import {
+  ADDRESS_ONE,
+  ADDRESS_THREE,
+  ADDRESS_TWO,
   JudiciaryCommittee,
   MasterNodeCommittee,
   PeoplesHouseCommittee,
@@ -63,8 +66,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     const RatioTest = new RatioTest__factory(Alice);
     ratio = await RatioTest.deploy();
 
-    xdcValidatorMock = await deployXDCValidator(Alice);
-
     DaofinPlugin = new DaofinPlugin__factory(Alice);
     MockTimestampOracle = new MockTimestampOracle__factory(Alice);
     mockTimestampOracle = await MockTimestampOracle.deploy();
@@ -73,6 +74,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let electionIndex = BigNumber.from('0');
   describe('MasterNode: vote()', async () => {
     beforeEach(async () => {
+      xdcValidatorMock = await deployXDCValidator(Alice);
+
       daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
       const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber(); //Math.floor(Date.now() / 1000);
 
@@ -122,10 +125,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         ],
         [
           BigNumber.from(now + 60 * 60 * 24 * 1),
-          BigNumber.from(now + 60 * 60 * 24 * 3),
-          BigNumber.from(now + 60 * 60 * 24 * 4),
-          BigNumber.from(now + 60 * 60 * 24 * 6),
-          BigNumber.from(now + 60 * 60 * 24 * 7),
           BigNumber.from(now + 60 * 60 * 24 * 9),
         ],
         [Bob.address],
@@ -134,10 +133,12 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       (await daofinPlugin.initialize(...initializeParams)).wait();
 
+      await daofinPlugin.connect(Alice).joinHouse({value: parseEther('1')});
+
       createPropsalParams = createProposalParams(
         '0x00',
         [],
-        electionIndex,
+        '0',
         '0',
         '0',
         '0'
@@ -155,12 +156,13 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       );
       await proposalTx.wait();
 
-      await advanceTime(ethers, convertDaysToSeconds(2));
+      await xdcValidatorMock.connect(Mike).addCandidate(ADDRESS_TWO);
+      await xdcValidatorMock.connect(Mike).addCandidate(ADDRESS_ONE);
 
-      await xdcValidatorMock.addCandidate(Mike.address);
       await daofinPlugin
         .connect(Mike)
         .updateOrJoinMasterNodeDelegatee(John.address);
+      await advanceTime(ethers, convertDaysToSeconds(2));
     });
     it('MasterNode: must record in tally details', async () => {
       const voter = John;
@@ -177,11 +179,14 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         proposalId,
         voteCommittee
       );
-      expect(tallyAfter.no.toString()).not.be.eq(parseEther('1').toString());
-      expect(tallyAfter.no.toString()).be.eq(parseEther('0').toString());
+      expect(tallyAfter.no.toString()).not.be.eq(BigInt('1').toString());
+      expect(tallyAfter.no.toString()).be.eq(BigInt('0').toString());
 
-      expect(tallyAfter.yes.toString()).not.be.eq(parseEther('0').toString());
-      expect(tallyAfter.yes.toString()).be.eq(parseEther('1').toString());
+      expect(tallyAfter.yes.toString()).not.be.eq(BigInt('0').toString());
+      expect(tallyAfter.yes.toString()).be.eq(BigInt('2').toString());
+
+      expect(tallyAfter.abstain.toString()).not.be.eq(BigInt('1').toString());
+      expect(tallyAfter.abstain.toString()).be.eq(BigInt('0').toString());
     });
     it('MasterNode: must record voter address', async () => {
       const voter = John;
@@ -201,6 +206,53 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       expect(info.voted).to.be.true;
       expect(info.voted).not.be.false;
       expect(info.option).be.eq(voteOption);
+    });
+
+    it('MasterNode: must not record vote twice', async () => {
+      const voter = John;
+
+      const voteOption: VoteOption = VoteOption.Yes;
+
+      const voteTx = await daofinPlugin
+        .connect(voter)
+        .vote(proposalId, voteOption, false);
+      await voteTx.wait();
+
+      await expect(
+        daofinPlugin.connect(voter).vote(proposalId, voteOption, false)
+      ).be.reverted;
+
+      const info = await daofinPlugin.getProposalVoterToInfo(
+        proposalId,
+        voter.address
+      );
+
+      expect(info.voted).to.be.true;
+      expect(info.voted).not.be.false;
+      expect(info.option).be.eq(voteOption);
+    });
+    it('MasterNode weight must be same as its voting power', async () => {
+      const voter = John;
+
+      const voteOption: VoteOption = VoteOption.Yes;
+
+      await xdcValidatorMock.connect(Mike).addCandidate(ADDRESS_THREE);
+
+      const voteTx = await daofinPlugin
+        .connect(voter)
+        .vote(proposalId, voteOption, false);
+      await voteTx.wait();
+
+      await expect(
+        daofinPlugin.connect(voter).vote(proposalId, voteOption, false)
+      ).be.reverted;
+
+      const tallyAfter = await daofinPlugin.getProposalTallyDetails(
+        proposalId,
+        MasterNodeCommittee
+      );
+
+      expect(tallyAfter.yes).be.eq(2);
     });
   });
 });

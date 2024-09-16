@@ -123,10 +123,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         ],
         [
           BigNumber.from(now + 60 * 60 * 24 * 1),
-          BigNumber.from(now + 60 * 60 * 24 * 3),
-          BigNumber.from(now + 60 * 60 * 24 * 4),
-          BigNumber.from(now + 60 * 60 * 24 * 6),
-          BigNumber.from(now + 60 * 60 * 24 * 7),
           BigNumber.from(now + 60 * 60 * 24 * 9),
         ],
         [Bob.address],
@@ -134,6 +130,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       ];
 
       (await daofinPlugin.initialize(...initializeParams)).wait();
+
+      await daofinPlugin.connect(Alice).joinHouse({value: parseEther('1')});
 
       createPropsalParams = createProposalParams(
         '0x00',
@@ -143,6 +141,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         '0',
         '0'
       );
+
       createPropsalParams[6] = {
         value: '1',
       };
@@ -190,6 +189,9 @@ describe(PLUGIN_CONTRACT_NAME, function () {
 
       expect(tallyAfter.yes.toString()).not.be.eq('0');
       expect(tallyAfter.yes.toString()).be.eq('1');
+
+      expect(tallyAfter.abstain.toString()).not.be.eq('1');
+      expect(tallyAfter.abstain.toString()).be.eq('0');
     });
     it('Jury: must record voter address', async () => {
       const voter = Bob;

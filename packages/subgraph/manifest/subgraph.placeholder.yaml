@@ -44,6 +44,29 @@ dataSources:
           handler: handleUninstallationApplied
       file: ./src/osx/pluginSetupProcessor.ts
   {{/dataSources.PluginSetupProcessors}}
+  {{#dataSources.DaofinPluginFactory}}
+  # PluginSetupProcessor
+  - kind: ethereum/contract
+    name: {{name}}
+    network: {{network}}
+    source:
+      abi: DaofinPluginFactory
+      address: '{{address}}'
+      startBlock: {{startBlock}}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      entities:
+        - DaofinPluginFactory
+      abis:        
+        - name: DaofinPluginFactory
+          file: $PLUGIN_MODULE/artifacts/src/DaofinPluginFactory.sol/DaofinPluginFactory.json
+      eventHandlers:
+        - event: Deployed(address,address)
+          handler: handleDeployed
+      file: ./src/osx/factory.ts
+  {{/dataSources.DaofinPluginFactory}}
 # templates
 templates:
   # Plugin (package)
@@ -93,7 +116,7 @@ templates:
           handler: handleMasterNodeDelegateeUpdated
         - event: VoteReceived(uint256,address,bytes32,uint8)
           handler: handleVoteReceived
-        - event: ProposalTypeCreated(uint256,(bytes32,uint32,uint32,uint256)[])
+        - event: ProposalTypeCreated(uint256,(bytes32,uint32,uint32)[])
           handler: handleProposalTypeCreated
         - event: ProposalIdToProposalTypeIdAttached(uint256,uint256)
           handler: handleProposalIdToProposalTypeIdAttached
@@ -101,5 +124,9 @@ templates:
           handler: handleProposalExecuted
         - event: ElectionPeriodUpdated(uint64,uint64)
           handler: handleElectionPeriodUpdated
+        - event: HouseResignRequested(address,uint256,uint64)
+          handler: handleHouseResignRequested
+        - event: HouseResigned(address,uint256)
+          handler: handleHouseResigned
       file: ./src/plugin/plugin.ts
 

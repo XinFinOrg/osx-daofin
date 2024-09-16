@@ -17,6 +17,7 @@ import {
 } from '../../helpers/utils';
 import {
   ADDRESS_ONE,
+  ADDRESS_TWO,
   ADDRESS_ZERO,
   JudiciaryCommittee,
   MasterNodeCommittee,
@@ -67,8 +68,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     MockTimestampOracle = new MockTimestampOracle__factory(Alice);
     mockTimestampOracle = await MockTimestampOracle.deploy();
 
-    await xdcValidatorMock.addCandidate(Bob.address);
-    await xdcValidatorMock.addCandidate(Mike.address);
+    await xdcValidatorMock.connect(Bob).addCandidate(ADDRESS_ONE);
+    await xdcValidatorMock.connect(Mike).addCandidate(ADDRESS_TWO);
   });
 
   beforeEach(async () => {
@@ -121,7 +122,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       ],
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
-        BigNumber.from(now + 60 * 60 * 24 * 5),
+        BigNumber.from(now + 60 * 60 * 24 * 12),
       ],
       [Alice.address],
       parseEther('1'),
@@ -249,6 +250,104 @@ describe(PLUGIN_CONTRACT_NAME, function () {
           .connect(masterNode)
           .updateOrJoinMasterNodeDelegatee(newDelegatee)
       ).not.reverted;
+    });
+    it('master node updates delegate, and remove the previous delegate, also in mnToWeight mapping', async () => {
+      const masterNode1 = Bob;
+      const delegatee1 = John.address;
+      const delegatee2 = Beny.address;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee1)
+      ).not.reverted;
+
+      expect(await daofinPlugin.isMasterNodeDelegatee(delegatee1)).be.true;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee2)
+      ).not.reverted;
+
+      expect(await daofinPlugin.isMasterNodeDelegatee(delegatee1)).be.false;
+      expect(await daofinPlugin.isMasterNodeDelegatee(delegatee2)).be.true;
+
+      expect((await daofinPlugin.mnToWeights(delegatee2)).toNumber()).equal(1);
+      expect((await daofinPlugin.mnToWeights(delegatee1)).toNumber()).equal(0);
+    });
+    it('M1 -> D1, M2->D2 ', async () => {
+      const masterNode1 = Bob;
+      const masterNode2 = Mike;
+      const delegatee1 = John.address;
+      const delegatee2 = Beny.address;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee1)
+      ).not.reverted;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode2)
+          .updateOrJoinMasterNodeDelegatee(delegatee2)
+      ).not.reverted;
+    });
+    it('M1 -> D1, M2->D2, M1->D3 ', async () => {
+      const masterNode1 = Bob;
+      const masterNode2 = Mike;
+      const delegatee1 = John.address;
+      const delegatee2 = Beny.address;
+      const delegatee3 = ADDRESS_TWO;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee1)
+      ).not.reverted;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode2)
+          .updateOrJoinMasterNodeDelegatee(delegatee2)
+      ).not.reverted;
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee3)
+      ).not.reverted;
+    });
+    it('M1 -> D1, M2->D2, !M1->D2, !M2->D2 ', async () => {
+      const masterNode1 = Bob;
+      const masterNode2 = Mike;
+      const delegatee1 = John.address;
+      const delegatee2 = Beny.address;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee1)
+      ).not.reverted;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode2)
+          .updateOrJoinMasterNodeDelegatee(delegatee2)
+      ).not.reverted;
+
+      // must be reverted.
+      await expect(
+        daofinPlugin
+          .connect(masterNode1)
+          .updateOrJoinMasterNodeDelegatee(delegatee2)
+      ).reverted;
+
+      await expect(
+        daofinPlugin
+          .connect(masterNode2)
+          .updateOrJoinMasterNodeDelegatee(delegatee1)
+      ).reverted;
     });
   });
 });

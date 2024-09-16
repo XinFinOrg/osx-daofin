@@ -5,18 +5,14 @@ export const EMPTY_DATA = '0x';
 
 export const STORE_PERMISSION_ID = ethers.utils.id('STORE_PERMISSION');
 
-export const UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION_ID = ethers.utils.id(
-  'UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION'
+export const UPDATE_MIN_HOUSE_AMOUNT_PERMISSION_ID = ethers.utils.id(
+  'UPDATE_MIN_HOUSE_AMOUNT_PERMISSION'
 );
-export const UPDATE_COMMITTEE_VOTING_SETTINGS_PERMISSION_ID = ethers.utils.id(
-  'UPDATE_COMMITTEE_VOTING_SETTINGS_PERMISSION'
-);
+
 export const UPDATE_ELECTION_PERIOD_PERMISSION_ID = ethers.utils.id(
   'UPDATE_ELECTION_PERIOD_PERMISSION'
 );
-export const UPDATE_COMMITTEES_LIST_PERMISSION_ID = ethers.utils.id(
-  'UPDATE_COMMITTEES_LIST_PERMISSION'
-);
+
 export const UPDATE_JUDICIARY_MAPPING_PERMISSION_ID = ethers.utils.id(
   'UPDATE_JUDICIARY_MAPPING_PERMISSION'
 );
@@ -24,10 +20,16 @@ export const EXECUTE_PERMISSION_ID = ethers.utils.id('EXECUTE_PERMISSION');
 export const CREATE_PROPOSAL_TYPE_PERMISSION_ID = ethers.utils.id(
   'CREATE_PROPOSAL_TYPE_PERMISSION'
 );
+export const MODIFY_PROPOSAL_TYPE_PERMISSION_ID = ethers.utils.id(
+  'MODIFY_PROPOSAL_TYPE_PERMISSION'
+);
 export const UPDATE_PROPOSAL_COSTS_PERMISSION_ID = ethers.utils.id(
   'UPDATE_PROPOSAL_COSTS_PERMISSION'
 );
-
+export const UPGRADE_PLUGIN_PERMISSION_ID = ethers.utils.id(
+  'UPGRADE_PLUGIN_PERMISSION'
+);
+export const ROOT_PERMISSION_ID = ethers.utils.id('ROOT_PERMISSION');
 export const MasterNodeCommittee = ethers.utils.id('MASTER_NODE_COMMITTEE');
 export const PeoplesHouseCommittee = ethers.utils.id('PEOPLES_HOUSE_COMMITTEE');
 export const JudiciaryCommittee = ethers.utils.id('JUDICIARY_COMMITTEE');
@@ -35,6 +37,7 @@ export const JudiciaryCommittee = ethers.utils.id('JUDICIARY_COMMITTEE');
 export const ADDRESS_ZERO = ethers.constants.AddressZero;
 export const ADDRESS_ONE = `0x${'0'.repeat(39)}1`;
 export const ADDRESS_TWO = `0x${'0'.repeat(39)}2`;
+export const ADDRESS_THREE = `0x${'0'.repeat(39)}3`;
 export const NO_CONDITION = ADDRESS_ZERO;
 export const BYTES32_ZERO =
   '0x0000000000000000000000000000000000000000000000000000000000000000';

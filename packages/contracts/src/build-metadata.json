@@ -30,11 +30,6 @@
               "internalType": "uint32",
               "name": "minParticipation",
               "type": "uint32"
-            },
-            {
-              "internalType": "uint256",
-              "name": "minVotingPower",
-              "type": "uint256"
             }
           ],
           "internalType": "struct DaofinPlugin.CommitteeVotingSettings[]",
@@ -57,11 +52,6 @@
               "internalType": "uint32",
               "name": "minParticipation",
               "type": "uint32"
-            },
-            {
-              "internalType": "uint256",
-              "name": "minVotingPower",
-              "type": "uint256"
             }
           ],
           "internalType": "struct DaofinPlugin.CommitteeVotingSettings[]",

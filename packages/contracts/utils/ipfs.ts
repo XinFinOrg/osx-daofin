@@ -5,13 +5,14 @@ export async function uploadToIPFS(
   content: string,
   testing: boolean = true
 ): Promise<string> {
+  const ipfsUrl = process.env.IPFS_URL || '';
   const ipfsApiKey = process.env.IPFS_API_KEY || '';
   const ipfsApiSecret = process.env.IPFS_API_SECRET || '';
   const encodeAuthCred = Buffer.from(`${ipfsApiKey}:${ipfsApiSecret}`).toString(
     'base64'
   );
   const client = IPFS.create({
-    url: 'https://ipfs.infura.io:5001',
+    url: ipfsUrl,
     headers: {
       Authorization: `Basic ${encodeAuthCred}`,
     },

@@ -112,7 +112,7 @@ type PluginProposal implements IProposal @entity {
   proposalType: PluginProposalType
   votes: [PluginProposalVote!]! @derivedFrom(field: "proposal")
 }
-type PluginDeposit @entity(immutable: true) {
+type PluginDeposit @entity {
   id: ID! # dao + block number
   voter: Bytes!
   amount: BigInt!
@@ -121,6 +121,13 @@ type PluginDeposit @entity(immutable: true) {
   dao: Dao!
   txHash: Bytes
   depositDate: BigInt
+  isActive: Boolean!
+  startOfCooldownPeriod: BigInt
+  endOfCooldownPeriod: BigInt
+  requestToResignTimestamp: BigInt
+  claimTimestamp: BigInt
+  requestToResignTxHash: Bytes
+  claimTxHash: Bytes
 }
 type DaoDeposit @entity(immutable: true) {
   id: ID! # dao + block number
@@ -181,7 +188,6 @@ type CommitteeVotingSettings @entity {
   name: Bytes!
   supportThreshold: BigInt!
   minParticipation: BigInt!
-  minVotingPower: BigInt!
   proposalType: PluginProposalType!
 }
 
@@ -190,4 +196,9 @@ type PluginElectionPeriods @entity {
   startDate: BigInt!
   endDate: BigInt!
   plugin: Plugin!
+}
+type DaofinPluginFactory @entity {
+  id: ID!
+  dao: ID!
+  plugin: ID!
 }

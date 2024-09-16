@@ -2,6 +2,8 @@ import {DaofinPluginSetupParams} from '../../../plugin-settings';
 import {
   DaofinPlugin,
   DaofinPlugin__factory,
+  MockTimestampOracle,
+  MockTimestampOracle__factory,
   XDCValidator,
 } from '../../../typechain';
 import {deployWithProxy} from '../../../utils/helpers';
@@ -43,6 +45,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let Beny: SignerWithAddress;
   let xdcValidatorMock: XDCValidator;
   let ratio: RatioTest;
+  let MockTimestampOracle: MockTimestampOracle__factory;
+  let mockTimestampOracle: MockTimestampOracle;
   before(async () => {
     signers = await ethers.getSigners();
     Alice = signers[0];
@@ -58,16 +62,18 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     ratio = await RatioTest.deploy();
 
     xdcValidatorMock = await deployXDCValidator(Alice);
+    MockTimestampOracle = new MockTimestampOracle__factory(Alice);
+    mockTimestampOracle = await MockTimestampOracle.deploy();
   });
 
   beforeEach(async () => {
     daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
-    const now = Math.floor(new Date().getTime() / 1000);
+    const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber();
 
     initializeParams = [
       dao.address,
       parseEther('1'),
-      XdcValidator,
+      xdcValidatorMock.address,
       [
         createCommitteeVotingSettings(
           MasterNodeCommittee,
@@ -110,11 +116,9 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       ],
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
-        BigNumber.from(now + 60 * 60 * 24 * 5),
-        BigNumber.from(now + 60 * 60 * 24 * 6),
-        BigNumber.from(now + 60 * 60 * 24 * 8),
+        BigNumber.from(now + 60 * 60 * 24 * 11),
       ],
-      [ADDRESS_ONE],
+      [Alice.address],
       '1',
     ];
     await daofinPlugin.initialize(...initializeParams);
@@ -149,8 +153,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       createPropsalParams = createProposalParams(
         '0x00',
         [],
-        '1',
-        '1',
+        '0',
+        '0',
         '0',
         '0'
       );
@@ -159,19 +163,20 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       const proposalId = await daofinPlugin.callStatic.createProposal(
         ...createPropsalParams
       );
+
       await expect(daofinPlugin.createProposal(...createPropsalParams)).to.not
         .reverted;
       expect(
         (await daofinPlugin.getProposal(proposalId)).proposalTypeId
-      ).to.be.eq('1');
+      ).to.be.eq('0');
       expect(await daofinPlugin.proposalCount()).to.be.eq('1');
     });
     it('proposalCost must be charged', async () => {
       createPropsalParams = createProposalParams(
         '0x00',
         [],
-        '1',
-        '1',
+        '0',
+        '0',
         '0',
         '0'
       );

@@ -27,6 +27,8 @@ error NotReadyToExecute();
 error UnexpectedFailure();
 error InValidTime();
 error CannotCreateProposalWithinElectionPeriod();
+error WrongOperation();
+error InValidStatus();
 
 abstract contract BaseDaofinPlugin is
     Initializable,
@@ -48,7 +50,7 @@ abstract contract BaseDaofinPlugin is
         bytes32 name;
         uint32 supportThreshold;
         uint32 minParticipation;
-        uint256 minVotingPower;
+        // uint256 minVotingPower;
     }
     struct VoteInfo {
         bool voted;
@@ -67,7 +69,7 @@ abstract contract BaseDaofinPlugin is
         uint256 allowFailureMap;
         uint64 startDate;
         uint64 endDate;
-        uint64 snapshotBlock;
+        bytes metadata;
         address[] voters;
         IDAO.Action[] actions;
         mapping(address => VoteInfo) voterToInfo;
@@ -94,25 +96,24 @@ abstract contract BaseDaofinPlugin is
     bytes32 public constant PeoplesHouseCommittee = keccak256("PEOPLES_HOUSE_COMMITTEE");
     bytes32 public constant JudiciaryCommittee = keccak256("JUDICIARY_COMMITTEE");
 
-    bytes32 public constant UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION =
-        keccak256("UPDATE_DAO_FIN_VOTING_SETTINGS_PERMISSION");
-
-    bytes32 public constant UPDATE_COMMITTEE_VOTING_SETTINGS_PERMISSION =
-        keccak256("UPDATE_COMMITTEE_VOTING_SETTINGS_PERMISSION");
+    bytes32 public constant UPDATE_MIN_HOUSE_AMOUNT_PERMISSION =
+        keccak256("UPDATE_MIN_HOUSE_AMOUNT_PERMISSION");
 
     bytes32 public constant UPDATE_ELECTION_PERIOD_PERMISSION =
         keccak256("UPDATE_ELECTION_PERIOD_PERMISSION");
-
-    bytes32 public constant UPDATE_COMMITTEES_LIST_PERMISSION =
-        keccak256("UPDATE_COMMITTEES_LIST_PERMISSION");
 
     bytes32 public constant UPDATE_JUDICIARY_MAPPING_PERMISSION =
         keccak256("UPDATE_JUDICIARY_MAPPING_PERMISSION");
 
     bytes32 public constant CREATE_PROPOSAL_TYPE_PERMISSION =
         keccak256("CREATE_PROPOSAL_TYPE_PERMISSION");
+    bytes32 public constant MODIFY_PROPOSAL_TYPE_PERMISSION =
+        keccak256("MODIFY_PROPOSAL_TYPE_PERMISSION");
     bytes32 public constant UPDATE_PROPOSAL_COSTS_PERMISSION =
         keccak256("UPDATE_PROPOSAL_COSTS_PERMISSION");
+
+    uint64 public constant EXECUTION_DELAY_BLOCK = 10 minutes;
+    uint64 public constant EXECUTION_DELAY_BLOCK_END = 1 days;
 
     event JudiciaryChanged(address _member, uint256 _action); // action: 0 = Add, 1 = Remove
     event ElectionPeriodUpdated(uint64 _start, uint64 _end);
@@ -131,10 +132,11 @@ abstract contract BaseDaofinPlugin is
     event ProposalCostsReceived(uint256 _proposalId, address _proposer, uint256 _cost);
     event HouseResignRequested(address _houseMember, uint256 _amount, uint64 _cooldown);
     event HouseResigned(address _houseMember, uint256 _amount);
+    event ProposalMetadataUpdated(uint256 _proposalId, bytes _metadata);
+    event MnSynced(address _mn);
 
-    // TODO
     function supportsInterface(
-        bytes4
+        bytes4 interfaceId
     )
         public
         view
@@ -142,6 +144,9 @@ abstract contract BaseDaofinPlugin is
         override(ERC165Upgradeable, PluginUUPSUpgradeable, ProposalUpgradeable)
         returns (bool)
     {
-        return true;
+        return super.supportsInterface(interfaceId);
     }
+
+    /// @notice This empty reserved space is put in place to allow future versions to add new variables without shifting down storage in the inheritance chain (see [OpenZeppelin's guide about storage gaps](https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps)).
+    uint256[50] private __gap;
 }

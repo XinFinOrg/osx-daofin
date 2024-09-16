@@ -101,7 +101,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
         ],
         [
           BigNumber.from(now + 60 * 60 * 24 * 3),
-          BigNumber.from(now + 60 * 60 * 24 * 5),
+          BigNumber.from(now + 60 * 60 * 24 * 15),
         ],
         [ADDRESS_ONE],
         '10',
@@ -185,10 +185,6 @@ describe(PLUGIN_CONTRACT_NAME, function () {
             .to.equal(
               parseInt(initializeParams[4][i].minParticipation.toString())
             );
-
-          expect(settings.minVotingPower)
-            .to.greaterThan(0)
-            .to.equal(initializeParams[3][i].minVotingPower.toString());
 
           expect(settings.supportThreshold)
             .to.greaterThan(0)

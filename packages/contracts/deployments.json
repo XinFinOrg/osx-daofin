@@ -1,0 +1,12 @@
+{
+  "apothem": {
+    "daoAddress": "0x9EfD35A5AEe913272195709B5b031894F00EA4e3",
+    "factory": "0xAC9440D76bc3c5291A7BF21a22520bA30F5C3c0d",
+    "pluginAddress": "0x254de4BA255735dF91B430c2D3686477A4E93618"
+  },
+  "xdc": {
+    "daoAddress": "0xd7BF844A67954437593057b038b221485a2555C3",
+    "factory": "0xAF9818b2C94220Ea6740354C26DF901852BC9C93",
+    "pluginAddress": "0xE514ca0B19B5bDBe01D60Be0879ed2cf4b2749E2"
+  }
+}

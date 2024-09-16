@@ -2,6 +2,8 @@ import {DaofinPluginSetupParams} from '../../../plugin-settings';
 import {
   DaofinPlugin,
   DaofinPlugin__factory,
+  MockTimestampOracle,
+  MockTimestampOracle__factory,
   XDCValidator,
 } from '../../../typechain';
 import {deployWithProxy} from '../../../utils/helpers';
@@ -15,12 +17,12 @@ import {
 } from '../../helpers/utils';
 import {
   ADDRESS_ONE,
-  ADDRESS_TWO,
   ADDRESS_ZERO,
   JudiciaryCommittee,
   MasterNodeCommittee,
   PeoplesHouseCommittee,
   UPDATE_JUDICIARY_MAPPING_PERMISSION_ID,
+  UPDATE_PROPOSAL_COSTS_PERMISSION_ID,
   XdcValidator,
 } from '../daofin-common';
 import {SignerWithAddress} from '@nomiclabs/hardhat-ethers/signers';
@@ -38,6 +40,7 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let DaofinPlugin: DaofinPlugin__factory;
   let daofinPlugin: DaofinPlugin;
   let initializeParams: Parameters<DaofinPlugin['initialize']>;
+  let createPropsalParams: Parameters<DaofinPlugin['createProposal']>;
   let Alice: SignerWithAddress;
   let Bob: SignerWithAddress;
   let Mike: SignerWithAddress;
@@ -45,6 +48,8 @@ describe(PLUGIN_CONTRACT_NAME, function () {
   let Beny: SignerWithAddress;
   let xdcValidatorMock: XDCValidator;
   let ratio: RatioTest;
+  let MockTimestampOracle: MockTimestampOracle__factory;
+  let mockTimestampOracle: MockTimestampOracle;
   before(async () => {
     signers = await ethers.getSigners();
     Alice = signers[0];
@@ -60,12 +65,15 @@ describe(PLUGIN_CONTRACT_NAME, function () {
     const RatioTest = new RatioTest__factory(Alice);
     ratio = await RatioTest.deploy();
 
+    MockTimestampOracle = new MockTimestampOracle__factory(Alice);
+    mockTimestampOracle = await MockTimestampOracle.deploy();
+
     xdcValidatorMock = await deployXDCValidator(Alice);
   });
 
   beforeEach(async () => {
     daofinPlugin = await deployWithProxy<DaofinPlugin>(DaofinPlugin);
-    const now = Math.floor(new Date().getTime() / 1000);
+    const now = (await mockTimestampOracle.getUint64Timestamp()).toNumber();
 
     initializeParams = [
       dao.address,
@@ -113,104 +121,48 @@ describe(PLUGIN_CONTRACT_NAME, function () {
       ],
       [
         BigNumber.from(now + 60 * 60 * 24 * 3),
-        BigNumber.from(now + 60 * 60 * 24 * 11),
+        BigNumber.from(now + 60 * 60 * 24 * 12),
       ],
-      [Alice.address],
+      [Bob.address],
       '1',
     ];
     await daofinPlugin.initialize(...initializeParams);
+
+    await daofinPlugin.joinHouse({value: parseEther('1')});
   });
-  describe('Add Jury', async () => {
-    it('Only DAO is allowed to change', async () => {
-      const daoTreasury = Alice;
-      await expect(
-        daofinPlugin
-          .connect(daoTreasury)
-          .addJudiciaryMembers([John.address, Mike.address, Beny.address])
-      ).reverted;
-
-      await dao.grant(
-        daofinPlugin.address,
-        daoTreasury.address,
-        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
+  describe('Modify Proposal Metadata', async () => {
+    it('must not revert if it is before starting period', async () => {
+      createPropsalParams = createProposalParams(
+        '0x00',
+        [],
+        '0',
+        '0',
+        '0',
+        '0'
       );
-      await expect(
-        daofinPlugin
-          .connect(daoTreasury)
-          .addJudiciaryMembers([John.address, Mike.address, Beny.address])
-      ).not.reverted;
-    });
+      createPropsalParams[6] = {
+        value: '1',
+      };
 
-    it('must not accept zero address', async () => {
-      const daoTreasury = Alice;
-
-      await dao.grant(
-        daofinPlugin.address,
-        Alice.address,
-        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
-      );
-      await expect(
-        daofinPlugin
-          .connect(daoTreasury)
-          .addJudiciaryMembers([John.address, Mike.address, ADDRESS_ZERO])
-      ).reverted;
-    });
-
-    it('must revert for duplicated address', async () => {
-      const daoTreasury = Alice;
-
-      await dao.grant(
-        daofinPlugin.address,
-        Alice.address,
-        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
-      );
-      await expect(
-        daofinPlugin.connect(daoTreasury).addJudiciaryMembers([Mike.address])
-      ).not.reverted;
-      await expect(
-        daofinPlugin.connect(daoTreasury).addJudiciaryMembers([Mike.address])
-      ).reverted;
-    });
-    it('must bump the counter', async () => {
-      const daoTreasury = Alice;
-
-      await dao.grant(
-        daofinPlugin.address,
-        Alice.address,
-        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
+      const proposalId = await daofinPlugin.callStatic.createProposal(
+        ...createPropsalParams
       );
 
-      const beforeJuryCount = await daofinPlugin._judiciaryCommitteeCount();
-
-      const newMembers = [John.address, Mike.address, Beny.address];
-      await daofinPlugin
-        .connect(daoTreasury)
-        .addJudiciaryMembers([John.address, Mike.address, Beny.address]);
-
-      const afterJuryCount = await daofinPlugin._judiciaryCommitteeCount();
-
-      expect(beforeJuryCount.add(newMembers.length)).eq(afterJuryCount);
-    });
-
-    it('must add to mapping', async () => {
-      const daoTreasury = Alice;
-
-      await dao.grant(
-        daofinPlugin.address,
-        Alice.address,
-        UPDATE_JUDICIARY_MAPPING_PERMISSION_ID
+      const proposalTx = await daofinPlugin.createProposal(
+        ...createPropsalParams
       );
+      await proposalTx.wait();
 
-      const newMembers = [John.address, Mike.address, Beny.address];
+      await expect(daofinPlugin.editProposalMetadata(proposalId, '0x01')).to.not
+        .reverted;
 
-      await daofinPlugin
-        .connect(daoTreasury)
-        .addJudiciaryMembers([John.address, Mike.address, Beny.address]);
+      await advanceTime(ethers, convertDaysToSeconds(4));
 
-      newMembers.forEach(async member => {
-        const isMember = await daofinPlugin._judiciaryCommittee(member);
-        expect(isMember).to.be.true;
-      });
+      await expect(daofinPlugin.editProposalMetadata(proposalId, '0x01')).to
+        .reverted;
+
+      const proposal = await daofinPlugin._proposals(proposalId);
+      expect(proposal.metadata).to.equal('0x01');
     });
   });
 });
